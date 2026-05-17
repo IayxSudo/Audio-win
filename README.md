@@ -4,10 +4,6 @@
 
 A clean and fast music player for Windows, made with WPF, C#, and NAudio.
 
-No web stuff or extra bloat — just a simple, nice-looking desktop app with a dark design.
-
-## Features
-
 - Modern dark look with smooth animations
 - Sound wave visualizer that moves to the music
 - Playlists that save automatically
@@ -24,8 +20,6 @@ No web stuff or extra bloat — just a simple, nice-looking desktop app with a d
 - System.Text.Json
 
 It builds as a single .exe file with nothing else needed.
-
-## Getting Started
 
 Clone the repo:
 ```bash
