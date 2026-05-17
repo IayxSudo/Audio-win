@@ -1,5 +1,7 @@
 # Audio-win
 
+![Audio-win](https://cdn.discordapp.com/attachments/1472182344168374454/1505385667411316797/Screenshot_2026-05-16_183330.png)
+
 A clean and fast music player for Windows, made with WPF, C#, and NAudio.
 
 No web stuff or extra bloat — just a simple, nice-looking desktop app with a dark design.
