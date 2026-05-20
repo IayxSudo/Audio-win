@@ -808,6 +808,135 @@ namespace AudioWin
             if (audioEngine != null) audioEngine.IsMono = ToggleMono.IsChecked == true;
         }
 
+        private void BtnImportBackup_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog ofd = new OpenFileDialog
+            {
+                Filter = "AudioWin Playlists (*.json)|audiowin_data.json;*.json|All Files (*.*)|*.*",
+                Title = "Select Your Old audiowin_data.json File"
+            };
+
+            if (ofd.ShowDialog() == true)
+            {
+                try
+                {
+                    var json = System.IO.File.ReadAllText(ofd.FileName);
+                    var importedPlaylists = System.Text.Json.JsonSerializer.Deserialize<ObservableCollection<Playlist>>(json);
+                    if (importedPlaylists != null)
+                    {
+                        playlists.Clear();
+                        foreach (var p in importedPlaylists)
+                        {
+                            playlists.Add(p);
+                        }
+                        
+                        // Save immediately to standard AppData directory
+                        StorageManager.Save(playlists);
+                        
+                        // Try to load settings and stats from the same folder if they exist
+                        string dir = System.IO.Path.GetDirectoryName(ofd.FileName);
+                        if (!string.IsNullOrEmpty(dir))
+                        {
+                            string statsFile = System.IO.Path.Combine(dir, "audiowin_stats.json");
+                            if (System.IO.File.Exists(statsFile))
+                            {
+                                try
+                                {
+                                    var statsJson = System.IO.File.ReadAllText(statsFile);
+                                    var importedStats = System.Text.Json.JsonSerializer.Deserialize<AppStats>(statsJson);
+                                    if (importedStats != null)
+                                    {
+                                        stats = importedStats;
+                                        StorageManager.SaveStats(stats);
+                                    }
+                                }
+                                catch { }
+                            }
+
+                            string settingsFile = System.IO.Path.Combine(dir, "audiowin_settings.json");
+                            if (System.IO.File.Exists(settingsFile))
+                            {
+                                try
+                                {
+                                    var settingsJson = System.IO.File.ReadAllText(settingsFile);
+                                    var importedSettings = System.Text.Json.JsonSerializer.Deserialize<PlaybackSettings>(settingsJson);
+                                    if (importedSettings != null)
+                                    {
+                                        settings = importedSettings;
+                                        StorageManager.SaveSettings(settings);
+                                        ApplySettingsToUI();
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+
+                        MessageBox.Show("Playlists and settings successfully imported!", "Import Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("The selected file is not a valid AudioWin playlist backup.", "Import Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Failed to import file: " + ex.Message, "Import Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void BtnExportBackup_Click(object sender, RoutedEventArgs e)
+        {
+            SaveFileDialog sfd = new SaveFileDialog
+            {
+                Filter = "AudioWin Playlists (*.json)|audiowin_data.json|All Files (*.*)|*.*",
+                FileName = "audiowin_data.json",
+                Title = "Export Playlists Backup"
+            };
+
+            if (sfd.ShowDialog() == true)
+            {
+                try
+                {
+                    StorageManager.Save(playlists); // save latest
+                    
+                    // Copy existing database to chosen file
+                    string appDataFolder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AudioWin");
+                    string srcFile = System.IO.Path.Combine(appDataFolder, "audiowin_data.json");
+                    
+                    if (System.IO.File.Exists(srcFile))
+                    {
+                        System.IO.File.Copy(srcFile, sfd.FileName, true);
+                        
+                        // Also try to copy stats and settings to the same directory
+                        string destDir = System.IO.Path.GetDirectoryName(sfd.FileName);
+                        if (!string.IsNullOrEmpty(destDir))
+                        {
+                            try
+                            {
+                                string statsSrc = System.IO.Path.Combine(appDataFolder, "audiowin_stats.json");
+                                if (System.IO.File.Exists(statsSrc)) System.IO.File.Copy(statsSrc, System.IO.Path.Combine(destDir, "audiowin_stats.json"), true);
+                                
+                                string settingsSrc = System.IO.Path.Combine(appDataFolder, "audiowin_settings.json");
+                                if (System.IO.File.Exists(settingsSrc)) System.IO.File.Copy(settingsSrc, System.IO.Path.Combine(destDir, "audiowin_settings.json"), true);
+                            }
+                            catch { }
+                        }
+
+                        MessageBox.Show("Backup successfully exported!", "Export Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("No data found to back up. Please add some playlists first.", "Export Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Failed to export backup: " + ex.Message, "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
         private void ComboEQ_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (audioEngine == null || ComboEQ == null || !ComboEQ.IsLoaded) return;

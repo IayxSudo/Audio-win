@@ -270,6 +270,17 @@
                                 </UniformGrid>
                             </StackPanel>
                         </Border>
+
+                        <Border Background="#0D0D0D" Margin="0,20,0,0" Padding="30" CornerRadius="12">
+                            <StackPanel>
+                                <TextBlock Text="Playlists &amp; Settings Backup" FontSize="20" FontWeight="Bold" Margin="0,0,0,25"/>
+                                <TextBlock Text="If you just upgraded or unzipped AudioWin into a new folder, you can import your old playlists and settings below." FontSize="13" Foreground="{StaticResource GrayBrush}" TextWrapping="Wrap" Margin="0,0,0,20"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="BtnImportBackup" Content="Import Playlist / Settings File..." Click="BtnImportBackup_Click" Style="{StaticResource SidebarButton}" Width="260" Margin="0,0,20,0"/>
+                                    <Button x:Name="BtnExportBackup" Content="Export Current Backup..." Click="BtnExportBackup_Click" Style="{StaticResource SidebarButton}" Width="220"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
 
                     <!-- Stats View -->
