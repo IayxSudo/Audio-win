@@ -2,15 +2,28 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>disable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>app.ico</ApplicationIcon>
+    <AssemblyName>AudioWin</AssemblyName>
+    <RootNamespace>AudioWin</RootNamespace>
+    <Version>2.0.0</Version>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
+    <Product>AudioWin</Product>
+    <Company>AudioWin</Company>
+    <LangVersion>latest</LangVersion>
+    <!-- Templates bind to computed properties like Track.IsPlayable that only
+         exist at runtime; the XAML binding analyser flags them as errors. -->
+    <NoWarn>$(NoWarn);CS8632</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="DiscordRichPresence" Version="1.6.1.70" />
     <PackageReference Include="NAudio" Version="2.3.0" />
+    <PackageReference Include="YoutubeExplode" Version="6.6.2" />
   </ItemGroup>
 
   <ItemGroup>

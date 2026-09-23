@@ -6,8 +6,15 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Styles.xaml"/>
+                <!-- Controls.xaml pulls in Theme.xaml itself, so StaticResource
+                     lookups inside the templates resolve against one dictionary. -->
+                <ResourceDictionary Source="Themes/Controls.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <local:BoolToVisibilityConverter x:Key="BoolToVis"/>
+            <local:HasValueToVisibilityConverter x:Key="HasValueToVis"/>
+            <local:SourceToBrushConverter x:Key="SourceToBrush"/>
+            <local:SubtractConverter x:Key="Subtract"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,0 +1,40 @@
+# Visual Studio / MSBuild / .NET Core build outputs
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.exe
+*.msi
+*.dll
+*.pdb
+*.wixpdb
+
+# Local portable .NET SDK
+.dotnet/
+
+# User-specific files (Visual Studio / Rider)
+*.user
+*.userosscache
+*.suo
+*.userprefs
+.vs/
+.idea/
+
+# JSON settings/data files generated at runtime
+audiowin_data.json
+audiowin_settings.json
+audiowin_stats.json
+audiowin_log.txt
+*.log
+
+# System / OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.part
+invidious_test.json

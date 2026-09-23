@@ -1,0 +1,32 @@
+name: AudioWin
+options:
+  bundleIdPrefix: com.audiowin
+  deploymentTarget:
+    iOS: "16.0"
+  defaultConfig: Release
+
+targets:
+  AudioWin:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: AudioWinMobile
+        excludes:
+          - Info.plist
+          - Resources/README.md
+    info:
+      path: AudioWinMobile/Info.plist
+    settings:
+      base:
+        PRODUCT_NAME: AudioWin
+        PRODUCT_BUNDLE_IDENTIFIER: com.audiowin.mobile
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""
+        PROVISIONING_PROFILE_SPECIFIER: ""
+        DEVELOPMENT_TEAM: ""
+        ENABLE_BITCODE: NO
+        SKIP_INSTALL: NO

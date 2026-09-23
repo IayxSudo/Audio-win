@@ -5,593 +5,1246 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AudioWin"
         mc:Ignorable="d"
-        Title="AudioWin" Height="900" Width="1400" Icon="pack://application:,,,/app.png"
-        Background="{StaticResource BackgroundBrush}"
-        Foreground="{StaticResource ForegroundBrush}"
+        Title="AudioWin" Height="880" Width="1360" MinWidth="1040" MinHeight="640"
+        Icon="pack://application:,,,/app.png"
+        Background="{DynamicResource B.Base}"
+        Foreground="{DynamicResource B.Text}"
         WindowStartupLocation="CenterScreen"
-        WindowState="Maximized"
         WindowStyle="None"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
-        KeyDown="Window_KeyDown"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        TextOptions.TextFormattingMode="Ideal"
+        AllowDrop="True"
+        DragEnter="Window_DragEnter"
+        DragOver="Window_DragOver"
+        DragLeave="Window_DragLeave"
+        Drop="Window_Drop"
+        PreviewKeyDown="Window_PreviewKeyDown"
+        StateChanged="Window_StateChanged">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="32" 
-                      ResizeBorderThickness="5" 
-                      GlassFrameThickness="0" 
-                      CornerRadius="0"/>
+        <WindowChrome CaptionHeight="44" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0"/>
     </WindowChrome.WindowChrome>
-    
-    <Grid AllowDrop="True" Drop="Window_Drop">
+
+    <Window.Resources>
+
+        <!-- Taskbar thumbnail buttons. Neutral grey reads correctly on both the
+             light and dark Windows taskbar. -->
+        <DrawingImage x:Key="TaskbarPrevIcon">
+            <DrawingImage.Drawing>
+                <GeometryDrawing Brush="#FFDDDDDD" Geometry="M 18.5,4.8 L 18.5,19.2 L 8,12 Z M 4.4,4.8 L 6.9,4.8 L 6.9,19.2 L 4.4,19.2 Z"/>
+            </DrawingImage.Drawing>
+        </DrawingImage>
+        <DrawingImage x:Key="TaskbarNextIcon">
+            <DrawingImage.Drawing>
+                <GeometryDrawing Brush="#FFDDDDDD" Geometry="M 5.5,4.8 L 5.5,19.2 L 16,12 Z M 17.1,4.8 L 19.6,4.8 L 19.6,19.2 L 17.1,19.2 Z"/>
+            </DrawingImage.Drawing>
+        </DrawingImage>
+        <DrawingImage x:Key="TaskbarPlayIcon">
+            <DrawingImage.Drawing>
+                <GeometryDrawing Brush="#FFDDDDDD" Geometry="M 6.5,4.2 L 19.6,12 L 6.5,19.8 Z"/>
+            </DrawingImage.Drawing>
+        </DrawingImage>
+        <DrawingImage x:Key="TaskbarPauseIcon">
+            <DrawingImage.Drawing>
+                <GeometryDrawing Brush="#FFDDDDDD" Geometry="M 6.6,4.5 L 10.1,4.5 L 10.1,19.5 L 6.6,19.5 Z M 13.9,4.5 L 17.4,4.5 L 17.4,19.5 L 13.9,19.5 Z"/>
+            </DrawingImage.Drawing>
+        </DrawingImage>
+
+        <!-- ============================================================
+             Sidebar playlist row
+             ============================================================ -->
+        <DataTemplate x:Key="T.SidebarPlaylist">
+            <Grid Background="Transparent">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Width="34" Height="34" CornerRadius="8" ClipToBounds="True"
+                        Background="{DynamicResource B.ArtPlaceholder}">
+                    <Grid>
+                        <TextBlock Text="{Binding Initial}" FontSize="14" FontWeight="Bold"
+                                   Foreground="{DynamicResource B.TextDim}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Image Source="{Binding ImagePath}" Stretch="UniformToFill"
+                               Visibility="{Binding HasImage, Converter={StaticResource BoolToVis}}"/>
+                    </Grid>
+                </Border>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="Medium"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Subtitle}" FontSize="11"
+                               Foreground="{DynamicResource B.TextDim}" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <!-- ============================================================
+             Home grid card
+             ============================================================ -->
+        <DataTemplate x:Key="T.PlaylistCard">
+            <Border Width="196" Margin="0,0,24,28" Background="Transparent" Cursor="Hand"
+                    MouseLeftButtonUp="PlaylistCard_Click"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <TranslateTransform Y="0"/>
+                </Border.RenderTransform>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <EventTrigger RoutedEvent="MouseEnter">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="(RenderTransform).(TranslateTransform.Y)"
+                                                         To="-6" Duration="0:0:0.22"
+                                                         EasingFunction="{StaticResource E.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="(RenderTransform).(TranslateTransform.Y)"
+                                                         To="0" Duration="0:0:0.26"
+                                                         EasingFunction="{StaticResource E.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+
+                <Border Style="{StaticResource Card}" Padding="12" CornerRadius="18">
+                    <StackPanel>
+                        <Border Width="172" Height="172" CornerRadius="12" ClipToBounds="True"
+                                Background="{DynamicResource B.ArtPlaceholder}">
+                            <Grid>
+                                <TextBlock Text="{Binding Initial}" FontSize="60" FontWeight="Bold"
+                                           Foreground="{DynamicResource B.TextDim}" Opacity="0.55"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Image Source="{Binding ImagePath}" Stretch="UniformToFill"
+                                       Visibility="{Binding HasImage, Converter={StaticResource BoolToVis}}"/>
+                            </Grid>
+                        </Border>
+                        <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"
+                                   Margin="4,14,4,0" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding Subtitle}" FontSize="12"
+                                   Foreground="{DynamicResource B.TextDim}" Margin="4,4,4,6"/>
+                    </StackPanel>
+                </Border>
+            </Border>
+        </DataTemplate>
+
+        <!-- ============================================================
+             Track row
+             ============================================================ -->
+        <DataTemplate x:Key="T.SongRow">
+            <Grid Height="58" Background="Transparent">
+                <Grid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Play" Click="MenuPlayTrack_Click"/>
+                        <MenuItem Header="Add to queue" Click="MenuQueueTrack_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Download track" Click="MenuDownloadTrack_Click"/>
+                        <MenuItem Header="Edit title and artist…" Click="MenuEditTrack_Click"/>
+                        <MenuItem Header="Link a local audio file…" Click="MenuLinkFile_Click"/>
+                        <MenuItem Header="Open original link" Click="MenuOpenSource_Click"/>
+                        <MenuItem Header="Show in Explorer" Click="MenuShowInExplorer_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Remove from playlist" Click="MenuRemoveTrack_Click"/>
+                    </ContextMenu>
+                </Grid.ContextMenu>
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="42"/>
+                    <ColumnDefinition Width="58"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="0.85*"/>
+                    <ColumnDefinition Width="76"/>
+                    <ColumnDefinition Width="46"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- index / equaliser bars when this row is the live track -->
+                <Grid VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Index}" Foreground="{DynamicResource B.TextDim}"
+                               FontSize="13" HorizontalAlignment="Center"
+                               Visibility="{Binding IsNowPlaying, Converter={StaticResource BoolToVis}, ConverterParameter=invert}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Height="14"
+                                Visibility="{Binding IsNowPlaying, Converter={StaticResource BoolToVis}}">
+                        <Border Width="2.5" Height="6"  CornerRadius="1.5" Margin="1,0" VerticalAlignment="Bottom" Background="{DynamicResource B.Accent}"/>
+                        <Border Width="2.5" Height="13" CornerRadius="1.5" Margin="1,0" VerticalAlignment="Bottom" Background="{DynamicResource B.Accent}"/>
+                        <Border Width="2.5" Height="9"  CornerRadius="1.5" Margin="1,0" VerticalAlignment="Bottom" Background="{DynamicResource B.Accent}"/>
+                    </StackPanel>
+                </Grid>
+
+                <Border Grid.Column="1" Width="42" Height="42" CornerRadius="9" ClipToBounds="True"
+                        HorizontalAlignment="Left" Background="{DynamicResource B.ArtPlaceholder}">
+                    <Grid>
+                        <Path Data="{StaticResource I.Music}" Stretch="Uniform" Width="16" Height="16"
+                              Stroke="{DynamicResource B.TextDim}" StrokeThickness="1.5" Fill="Transparent"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Image Source="{Binding ImagePath}" Stretch="UniformToFill"
+                               Visibility="{Binding ImagePath, Converter={StaticResource HasValueToVis}}"/>
+                    </Grid>
+                </Border>
+
+                <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="14,0,16,0">
+                    <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                        <Border Style="{StaticResource Chip}" Padding="6,1"
+                                Visibility="{Binding IsLink, Converter={StaticResource BoolToVis}}">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="6" Height="6" VerticalAlignment="Center" Margin="0,0,5,0"
+                                         Fill="{Binding Path=Source, Converter={StaticResource SourceToBrush}}"/>
+                                <TextBlock Text="{Binding SourceLabel}" FontSize="10"
+                                           Foreground="{DynamicResource B.TextMuted}"/>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Text="needs a local file" FontSize="10.5" Margin="8,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource B.Warning}"
+                                   Visibility="{Binding NeedsFile, Converter={StaticResource BoolToVis}}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Grid.Column="3" Text="{Binding Artist}" VerticalAlignment="Center"
+                           Foreground="{DynamicResource B.TextMuted}" FontSize="13"
+                           TextTrimming="CharacterEllipsis" Margin="0,0,16,0"/>
+
+                <TextBlock Grid.Column="4" Text="{Binding Duration}" VerticalAlignment="Center"
+                           Foreground="{DynamicResource B.TextDim}" FontSize="12.5"/>
+
+                <ToggleButton Grid.Column="5" Style="{StaticResource Toggle.Like}"
+                              IsChecked="{Binding IsLiked, Mode=TwoWay}"
+                              Click="TrackLike_Click" HorizontalAlignment="Left"/>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Queue flyout row -->
+        <DataTemplate x:Key="T.QueueRow">
+            <Grid Height="46" Background="Transparent">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Width="34" Height="34" CornerRadius="8" ClipToBounds="True"
+                        Background="{DynamicResource B.ArtPlaceholder}">
+                    <Image Source="{Binding ImagePath}" Stretch="UniformToFill"/>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="Medium"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Artist}" FontSize="11"
+                               Foreground="{DynamicResource B.TextDim}" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+    </Window.Resources>
+
+    <Window.TaskbarItemInfo>
+        <TaskbarItemInfo>
+            <TaskbarItemInfo.ThumbButtonInfos>
+                <ThumbButtonInfo x:Name="ThumbPrev" ImageSource="{StaticResource TaskbarPrevIcon}"
+                                 Click="ThumbPrev_Click" Description="Previous track"/>
+                <ThumbButtonInfo x:Name="ThumbPlayPause" ImageSource="{StaticResource TaskbarPlayIcon}"
+                                 Click="ThumbPlayPause_Click" Description="Play/Pause"/>
+                <ThumbButtonInfo x:Name="ThumbNext" ImageSource="{StaticResource TaskbarNextIcon}"
+                                 Click="ThumbNext_Click" Description="Next track"/>
+            </TaskbarItemInfo.ThumbButtonInfos>
+        </TaskbarItemInfo>
+    </Window.TaskbarItemInfo>
+
+    <Grid x:Name="RootGrid">
         <Grid.RowDefinitions>
-            <RowDefinition Height="32"/>
+            <RowDefinition Height="44"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="110"/>
+            <RowDefinition Height="104"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280"/>
+            <ColumnDefinition Width="268"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Entire Top Bar Area -->
-        <Grid Grid.Row="0" Grid.ColumnSpan="2" Background="Transparent">
-            <!-- Visual Background (Non-interactive for the system drag to pass through) -->
-            <Border Background="{StaticResource BackgroundBrush}" BorderBrush="{StaticResource SecondaryBrush}" BorderThickness="0,0,0,1" IsHitTestVisible="False"/>
+        <!-- ==============================================================
+             TITLE BAR
+             ============================================================== -->
+        <Grid Grid.Row="0" Grid.ColumnSpan="2" Background="{DynamicResource B.Base}">
+            <Border BorderBrush="{DynamicResource B.StrokeSoft}" BorderThickness="0,0,0,1"
+                    IsHitTestVisible="False"/>
 
-            <!-- Branding / Logo -->
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,0,0" IsHitTestVisible="False">
-                <TextBlock Text="AudioWin" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource GrayBrush}" VerticalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0"
+                        IsHitTestVisible="False">
+                <TextBlock Text="AudioWin" FontSize="13" FontWeight="Bold" Margin="0,0,0,0"
+                           VerticalAlignment="Center" Foreground="{DynamicResource B.Text}"/>
+                <TextBlock x:Name="TxtTitleBarNowPlaying" Text="" FontSize="12" Margin="16,0,0,0"
+                           VerticalAlignment="Center" Foreground="{DynamicResource B.TextDim}"
+                           TextTrimming="CharacterEllipsis" MaxWidth="420"/>
             </StackPanel>
 
-            <!-- Window Controls (Explicitly hit-testable in chrome) -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" WindowChrome.IsHitTestVisibleInChrome="True">
-                <Button Style="{StaticResource WindowControlButton}" Click="BtnMinimize_Click" ToolTip="Minimize">
-                    <Path Width="10" Height="10" Data="M 0,5 H 10" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1" SnapsToDevicePixels="True"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        WindowChrome.IsHitTestVisibleInChrome="True">
+
+                <Button Style="{StaticResource Btn.Window}" Click="BtnMinimize_Click" ToolTip="Minimise">
+                    <Path Data="{StaticResource I.WinMinimize}" Width="10" Height="10" Stretch="None"
+                          StrokeThickness="1" SnapsToDevicePixels="True"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                 </Button>
-                <Button x:Name="BtnMaximize" Style="{StaticResource WindowControlButton}" Click="BtnMaximize_Click" ToolTip="Maximize">
-                    <Path x:Name="MaximizeIcon" Width="10" Height="10" Data="M 0,0 H 10 V 10 H 0 Z" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1" Fill="Transparent" SnapsToDevicePixels="True"/>
+                <Button x:Name="BtnMaximize" Style="{StaticResource Btn.Window}" Click="BtnMaximize_Click" ToolTip="Maximise">
+                    <Path x:Name="MaximizeIcon" Data="{StaticResource I.WinMaximize}" Width="10" Height="10"
+                          Stretch="None" StrokeThickness="1" Fill="Transparent" SnapsToDevicePixels="True"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                 </Button>
-                <Button Style="{StaticResource CloseButton}" Click="BtnClose_Click" ToolTip="Close">
-                    <Path Width="10" Height="10" Data="M 0,0 L 10,10 M 0,10 L 10,0" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1" SnapsToDevicePixels="True"/>
+                <Button Style="{StaticResource Btn.WindowClose}" Click="BtnClose_Click" ToolTip="Close">
+                    <Path Data="{StaticResource I.WinClose}" Width="10" Height="10" Stretch="None"
+                          StrokeThickness="1" SnapsToDevicePixels="True"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                 </Button>
             </StackPanel>
         </Grid>
 
-        <!-- Sidebar -->
-        <Border Grid.Row="1" Grid.Column="0" Background="{StaticResource SecondaryBrush}" BorderBrush="{StaticResource SecondaryBrush}" BorderThickness="0,0,1,0">
-            <StackPanel Margin="10,25,10,0">
-                <Button x:Name="BtnSidebarHome" Style="{StaticResource SidebarButtonActive}" Click="BtnHome_Click" Margin="0,0,0,6">
-                    <TextBlock Text="Home" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                </Button>
-                <Button x:Name="BtnSidebarStats" Style="{StaticResource SidebarButton}" Click="BtnStats_Click" Margin="0,0,0,6">
-                    <TextBlock Text="Statistics" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                </Button>
-                <Button x:Name="BtnSidebarLiked" Style="{StaticResource SidebarButton}" Click="BtnLikedSongs_Click" Margin="0,0,0,6">
-                    <TextBlock Text="Liked Songs" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                </Button>
-                <Button x:Name="BtnSidebarSettings" Style="{StaticResource SidebarButton}" Click="BtnSettings_Click" Margin="0,0,0,6">
-                    <TextBlock Text="Settings &amp; EQ" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                </Button>
+        <!-- ==============================================================
+             SIDEBAR
+             ============================================================== -->
+        <Border Grid.Row="1" Grid.Column="0" Background="{DynamicResource B.Surface}"
+                BorderBrush="{DynamicResource B.StrokeSoft}" BorderThickness="0,0,1,0">
+            <Grid Margin="12,16,12,12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-                <Border Background="{StaticResource HoverBrush}" CornerRadius="6" Margin="6,5,6,20" Height="38" Padding="15,0">
-                    <TextBox x:Name="TxtSearch" Background="Transparent" BorderThickness="0" Foreground="White" 
-                             local:PlaceholderBehavior.Placeholder="Search Playlists..." TextChanged="TxtSearch_TextChanged" FontSize="13" VerticalAlignment="Center"/>
+                <StackPanel Grid.Row="0">
+                    <RadioButton x:Name="NavHome" Style="{StaticResource Nav.Item}" GroupName="Nav"
+                                 IsChecked="True" Click="NavHome_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource I.Home}" Stretch="Uniform" Width="17" Height="17"
+                                  Fill="Transparent" StrokeThickness="1.6" StrokeLineJoin="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+                            <TextBlock Text="Home" Margin="14,0,0,0" VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton x:Name="NavLiked" Style="{StaticResource Nav.Item}" GroupName="Nav"
+                                 Click="NavLiked_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource I.Heart}" Stretch="Uniform" Width="17" Height="17"
+                                  Fill="Transparent" StrokeThickness="1.6" StrokeLineJoin="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+                            <TextBlock Text="Liked Songs" Margin="14,0,0,0" VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton x:Name="NavStats" Style="{StaticResource Nav.Item}" GroupName="Nav"
+                                 Click="NavStats_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource I.Stats}" Stretch="Uniform" Width="17" Height="17"
+                                  Fill="Transparent" StrokeThickness="1.8" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+                            <TextBlock Text="Statistics" Margin="14,0,0,0" VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton x:Name="NavSettings" Style="{StaticResource Nav.Item}" GroupName="Nav"
+                                 Click="NavSettings_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource I.Settings}" Stretch="Uniform" Width="17" Height="17"
+                                  Fill="Transparent" StrokeThickness="1.6" StrokeLineJoin="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+                            <TextBlock Text="Settings &amp; EQ" Margin="14,0,0,0" VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+                        </StackPanel>
+                    </RadioButton>
+                </StackPanel>
+
+                <!-- search -->
+                <Border Grid.Row="1" Margin="2,16,2,10" Height="38" CornerRadius="10"
+                        Background="{DynamicResource B.Elevated}" BorderBrush="{DynamicResource B.Stroke}"
+                        BorderThickness="1" Padding="12,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Path Data="{StaticResource I.Search}" Stretch="Uniform" Width="14" Height="14"
+                              Stroke="{DynamicResource B.TextDim}" StrokeThickness="1.7" Fill="Transparent"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" VerticalAlignment="Center"/>
+                        <TextBox x:Name="TxtSearch" Grid.Column="1" Style="{StaticResource Tb.Bare}"
+                                 Margin="10,0,0,0" local:Ui.Watermark="Search playlists"
+                                 TextChanged="TxtSearch_TextChanged"/>
+                    </Grid>
                 </Border>
 
-                <Button Style="{StaticResource SidebarButton}" x:Name="BtnCreatePlaylist" Click="BtnCreatePlaylist_Click" Margin="0,0,0,20">
-                    <TextBlock Text="New Playlist" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                </Button>
-                
-                <TextBlock Text="PLAYLISTS" FontSize="10" Foreground="{StaticResource GrayBrush}" FontWeight="Bold" Margin="16,0,0,12" Opacity="0.5"/>
-                
-                <ListBox x:Name="PlaylistsList" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <!-- section header -->
+                <Grid Grid.Row="2" Margin="16,8,2,6">
+                    <TextBlock Text="PLAYLISTS" Style="{StaticResource Txt.Label}" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="BtnImportLink" Style="{StaticResource Btn.IconSmall}"
+                                Click="BtnImportLink_Click" ToolTip="Add from a YouTube, Spotify, or SoundCloud link">
+                            <Path Data="{StaticResource I.Link}" Stretch="Uniform" Width="15" Height="15"
+                                  Fill="Transparent" StrokeThickness="1.7" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </Button>
+                        <Button x:Name="BtnCreatePlaylist" Style="{StaticResource Btn.IconSmall}"
+                                Click="BtnCreatePlaylist_Click" ToolTip="New playlist">
+                            <Path Data="{StaticResource I.Plus}" Stretch="Uniform" Width="15" Height="15"
+                                  Fill="Transparent" StrokeThickness="1.9" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <ListBox x:Name="PlaylistsList" Grid.Row="3" Style="{StaticResource Lb.Plain}"
+                         ItemContainerStyle="{StaticResource Li.Playlist}"
+                         ItemTemplate="{StaticResource T.SidebarPlaylist}"
+                         SelectionChanged="PlaylistsList_SelectionChanged"
+                         PreviewMouseRightButtonDown="PlaylistsList_PreviewMouseRightButtonDown">
                     <ListBox.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Header="Delete Playlist" Click="DeletePlaylist_Click"/>
+                            <MenuItem Header="Play" Click="MenuPlayPlaylist_Click"/>
+                            <MenuItem Header="Download whole playlist" Click="MenuDownloadPlaylist_Click"/>
+                            <MenuItem Header="Rename…" Click="MenuRenamePlaylist_Click"/>
+                            <MenuItem Header="Change cover…" Click="MenuChangeCover_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Delete playlist" Click="MenuDeletePlaylist_Click"/>
                         </ContextMenu>
                     </ListBox.ContextMenu>
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="Bd" Padding="16,8" Background="Transparent" CornerRadius="6" Margin="0,1" Cursor="Hand" MouseLeftButtonDown="SidebarPlaylistItem_Click">
-                                            <ContentPresenter/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBrush}"/>
-                                            </Trigger>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource SelectionBrush}"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding Name}" FontSize="13" Foreground="{StaticResource GrayBrush}" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
                 </ListBox>
-            </StackPanel>
+            </Grid>
         </Border>
 
-        <!-- Main Content -->
-        <Grid Grid.Row="1" Grid.Column="1">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <Grid>
-                    <!-- Home View -->
-                    <StackPanel x:Name="PlaylistsGrid" Margin="50,40">
-                        <TextBlock Text="Your Playlists" FontSize="48" FontWeight="Bold" Margin="0,0,0,50"/>
-                        <ItemsControl ItemsSource="{Binding ElementName=PlaylistsList, Path=ItemsSource}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel Orientation="Horizontal"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Width="220" Margin="0,0,40,50" Cursor="Hand" MouseLeftButtonDown="PlaylistCard_Click" Background="Transparent">
-                                        <Border.RenderTransform>
-                                            <ScaleTransform CenterX="110" CenterY="110"/>
-                                        </Border.RenderTransform>
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Style.Triggers>
-                                                    <EventTrigger RoutedEvent="MouseEnter">
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetProperty="(RenderTransform).ScaleX" To="1.05" Duration="0:0:0.2"/>
-                                                                <DoubleAnimation Storyboard.TargetProperty="(RenderTransform).ScaleY" To="1.05" Duration="0:0:0.2"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </EventTrigger>
-                                                    <EventTrigger RoutedEvent="MouseLeave">
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetProperty="(RenderTransform).ScaleX" To="1.0" Duration="0:0:0.2"/>
-                                                                <DoubleAnimation Storyboard.TargetProperty="(RenderTransform).ScaleY" To="1.0" Duration="0:0:0.2"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </EventTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <StackPanel>
-                                            <Border Width="220" Height="220" Background="#0D0D0D" Margin="0,0,0,15" CornerRadius="8" ClipToBounds="True">
-                                                <Grid>
-                                                    <Image Source="{Binding ImagePath}" Stretch="UniformToFill"/>
-                                                    <TextBlock x:Name="DefaultText" Text="{Binding Icon}" FontSize="72" FontWeight="Black" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding ImagePath}" Value="{x:Null}">
-                                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                </Grid>
-                                            </Border>
-                                            <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
-                                            <TextBlock Text="Playlist" FontSize="12" Foreground="{StaticResource GrayBrush}"/>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
+        <!-- ==============================================================
+             CONTENT
+             ============================================================== -->
+        <Grid Grid.Row="1" Grid.Column="1" Background="{DynamicResource B.ContentWash}" ClipToBounds="True">
 
-                    <!-- Settings View -->
-                    <StackPanel x:Name="SettingsGrid" Margin="50,40" Visibility="Collapsed">
-                        <TextBlock Text="Settings" FontSize="48" FontWeight="Bold" Margin="0,0,0,50"/>
-                        
-                        <Border Background="#0D0D0D" Margin="0,0,0,20" Padding="30" CornerRadius="12">
+            <!-- ============================ HOME ============================ -->
+            <ScrollViewer x:Name="HomeView" VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
+                <StackPanel Margin="42,34,42,40">
+                    <TextBlock x:Name="TxtHomeGreeting" Text="Your library" Style="{StaticResource Txt.Display}"/>
+                    <TextBlock x:Name="TxtHomeSub" Text="Pick up where you left off"
+                               Style="{StaticResource Txt.Muted}" Margin="0,8,0,30"/>
+
+                    <Border x:Name="EmptyLibraryState" Style="{StaticResource Card}" Padding="42"
+                            Visibility="Collapsed" Margin="0,0,24,24">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Path Data="{StaticResource I.Music}" Stretch="Uniform" Width="42" Height="42"
+                                  Stroke="{DynamicResource B.TextDim}" StrokeThickness="1.3" Fill="Transparent"
+                                  HorizontalAlignment="Center"/>
+                            <TextBlock Text="No playlists yet" Style="{StaticResource Txt.Heading}"
+                                       HorizontalAlignment="Center" Margin="0,20,0,0"/>
+                            <TextBlock Text="Create one, or paste a YouTube, Spotify, or SoundCloud link to get started."
+                                       Style="{StaticResource Txt.Muted}" HorizontalAlignment="Center" Margin="0,8,0,22"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button Content="New playlist" Style="{StaticResource Btn.Primary}"
+                                        Click="BtnCreatePlaylist_Click" Margin="0,0,12,0"/>
+                                <Button Content="Add from a link" Style="{StaticResource Btn.Secondary}"
+                                        Click="BtnImportLink_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <ItemsControl x:Name="PlaylistsItems" ItemTemplate="{StaticResource T.PlaylistCard}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ========================= STATISTICS ========================= -->
+            <ScrollViewer x:Name="StatsView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed" Padding="0,0,6,0">
+                <StackPanel Margin="42,34,42,40">
+                    <TextBlock Text="Statistics" Style="{StaticResource Txt.Display}"/>
+                    <TextBlock Text="Everything AudioWin has noticed about your listening"
+                               Style="{StaticResource Txt.Muted}" Margin="0,8,0,30"/>
+
+                    <UniformGrid Columns="3">
+                        <Border Style="{StaticResource Card}" Margin="0,0,16,16">
                             <StackPanel>
-                                <TextBlock Text="Audio Preferences" FontSize="20" FontWeight="Bold" Margin="0,0,0,25"/>
-                                
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
-                                    <TextBlock Text="Audio Normalization" Width="200" VerticalAlignment="Center" FontSize="14"/>
-                                    <CheckBox x:Name="ToggleNormalization" Click="ToggleNormalization_Click" Style="{StaticResource ToggleSwitch}"/>
-                                </StackPanel>
-
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
-                                    <TextBlock Text="Mono Audio" Width="200" VerticalAlignment="Center" FontSize="14"/>
-                                    <CheckBox x:Name="ToggleMono" Click="ToggleMono_Click" Style="{StaticResource ToggleSwitch}"/>
-                                </StackPanel>
+                                <TextBlock Text="TOTAL LISTENING" Style="{StaticResource Txt.Label}"/>
+                                <TextBlock x:Name="StatTotalTime" Text="0 hours" Style="{StaticResource Txt.Title}" Margin="0,12,0,0"/>
                             </StackPanel>
                         </Border>
-                        
-                        <Border Background="#0D0D0D" Margin="0,0,0,0" Padding="30" CornerRadius="12">
+                        <Border Style="{StaticResource Card}" Margin="0,0,16,16">
                             <StackPanel>
-                                <TextBlock Text="10-Band Equalizer" FontSize="20" FontWeight="Bold" Margin="0,0,0,25"/>
-                                
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,25">
-                                    <TextBlock Text="Preset:" Width="80" VerticalAlignment="Center" FontSize="14"/>
-                                    <ComboBox x:Name="ComboEQ" Width="150" SelectionChanged="ComboEQ_SelectionChanged">
+                                <TextBlock Text="SONGS PLAYED" Style="{StaticResource Txt.Label}"/>
+                                <TextBlock x:Name="StatTotalPlayed" Text="0" Style="{StaticResource Txt.Title}" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="TRACKS IN LIBRARY" Style="{StaticResource Txt.Label}"/>
+                                <TextBlock x:Name="StatTotalTracks" Text="0" Style="{StaticResource Txt.Title}" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <UniformGrid Columns="2">
+                        <Border Style="{StaticResource Card}" Margin="0,0,16,16">
+                            <StackPanel>
+                                <TextBlock Text="MOST PLAYED PLAYLIST" Style="{StaticResource Txt.Label}"/>
+                                <TextBlock x:Name="StatMostPlayedPlaylist" Text="None yet"
+                                           Style="{StaticResource Txt.Heading}" FontSize="21" Margin="0,12,0,0"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="MOST PLAYED TRACK" Style="{StaticResource Txt.Label}"/>
+                                <TextBlock x:Name="StatTopTrack" Text="None yet"
+                                           Style="{StaticResource Txt.Heading}" FontSize="21" Margin="0,12,0,0"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <UniformGrid Columns="2">
+                        <Border Style="{StaticResource Card}" Margin="0,0,16,0">
+                            <StackPanel>
+                                <TextBlock Text="FIRST SONG YOU PLAYED" Style="{StaticResource Txt.Label}"/>
+                                <TextBlock x:Name="StatFirstSong" Text="None yet"
+                                           Style="{StaticResource Txt.Heading}" FontSize="21" Margin="0,12,0,0"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="LIKED SONGS" Style="{StaticResource Txt.Label}"/>
+                                <TextBlock x:Name="StatLiked" Text="0" Style="{StaticResource Txt.Title}" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ========================== SETTINGS ========================== -->
+            <ScrollViewer x:Name="SettingsView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed" Padding="0,0,6,0">
+                <StackPanel Margin="42,34,42,40" MaxWidth="980" HorizontalAlignment="Left">
+                    <TextBlock Text="Settings" Style="{StaticResource Txt.Display}"/>
+                    <TextBlock Text="Audio, appearance and integrations"
+                               Style="{StaticResource Txt.Muted}" Margin="0,8,0,30"/>
+
+                    <!-- APPEARANCE -->
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Text="Appearance" Style="{StaticResource Txt.Heading}" Margin="0,0,0,20"/>
+
+
+                            <Grid>
+                                <StackPanel>
+                                    <TextBlock Text="Show the visualiser" FontSize="13.5"/>
+                                    <TextBlock Text="Acoustic dynamic spectrum bars next to the volume slider."
+                                               Style="{StaticResource Txt.Muted}" FontSize="12" Margin="0,3,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="ToggleVisualizer" Style="{StaticResource Sw.Toggle}"
+                                          HorizontalAlignment="Right" Click="ToggleVisualizer_Click"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- AUDIO -->
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Text="Audio" Style="{StaticResource Txt.Heading}" Margin="0,0,0,20"/>
+
+                            <Grid Margin="0,0,0,18">
+                                <StackPanel>
+                                    <TextBlock Text="Volume levelling" FontSize="13.5"/>
+                                    <TextBlock Text="Boosts quiet tracks so the volume stays consistent."
+                                               Style="{StaticResource Txt.Muted}" FontSize="12" Margin="0,3,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="ToggleNormalization" Style="{StaticResource Sw.Toggle}"
+                                          HorizontalAlignment="Right" Click="ToggleNormalization_Click"/>
+                            </Grid>
+
+                            <Grid>
+                                <StackPanel>
+                                    <TextBlock Text="Mono audio" FontSize="13.5"/>
+                                    <TextBlock Text="Folds both channels together. Useful with one earbud in."
+                                               Style="{StaticResource Txt.Muted}" FontSize="12" Margin="0,3,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="ToggleMono" Style="{StaticResource Sw.Toggle}"
+                                          HorizontalAlignment="Right" Click="ToggleMono_Click"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- EQUALISER -->
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,18">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,22">
+                                <TextBlock Text="Equaliser" Style="{StaticResource Txt.Heading}" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <ComboBox x:Name="ComboEQ" Width="168" SelectionChanged="ComboEQ_SelectionChanged">
                                         <ComboBoxItem Content="Flat" IsSelected="True"/>
+                                        <ComboBoxItem Content="Super Bass"/>
                                         <ComboBoxItem Content="Bass Boost"/>
                                         <ComboBoxItem Content="Treble Boost"/>
                                         <ComboBoxItem Content="Electronic"/>
                                         <ComboBoxItem Content="Acoustic"/>
                                         <ComboBoxItem Content="Vocal Focus"/>
                                         <ComboBoxItem Content="Beat Focus"/>
+                                        <ComboBoxItem Content="Custom"/>
                                     </ComboBox>
+                                    <Button Content="Reset" Style="{StaticResource Btn.Secondary}"
+                                            Margin="10,0,0,0" Click="BtnResetEq_Click"/>
                                 </StackPanel>
+                            </Grid>
 
-                                <UniformGrid Columns="10" HorizontalAlignment="Stretch">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Slider x:Name="EqSlider0" Minimum="-12" Maximum="12" Value="0" Orientation="Vertical" Height="150" ValueChanged="EqSlider_ValueChanged" Tag="0" Style="{StaticResource MinimalSlider}"/>
-                                        <TextBlock Text="32Hz" FontSize="11" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" Margin="0,15,0,0"/>
-                                    </StackPanel>
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Slider x:Name="EqSlider1" Minimum="-12" Maximum="12" Value="0" Orientation="Vertical" Height="150" ValueChanged="EqSlider_ValueChanged" Tag="1" Style="{StaticResource MinimalSlider}"/>
-                                        <TextBlock Text="64Hz" FontSize="11" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" Margin="0,15,0,0"/>
-                                    </StackPanel>
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Slider x:Name="EqSlider2" Minimum="-12" Maximum="12" Value="0" Orientation="Vertical" Height="150" ValueChanged="EqSlider_ValueChanged" Tag="2" Style="{StaticResource MinimalSlider}"/>
-                                        <TextBlock Text="125Hz" FontSize="11" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" Margin="0,15,0,0"/>
-                                    </StackPanel>
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Slider x:Name="EqSlider3" Minimum="-12" Maximum="12" Value="0" Orientation="Vertical" Height="150" ValueChanged="EqSlider_ValueChanged" Tag="3" Style="{StaticResource MinimalSlider}"/>
-                                        <TextBlock Text="250Hz" FontSize="11" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" Margin="0,15,0,0"/>
-                                    </StackPanel>
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Slider x:Name="EqSlider4" Minimum="-12" Maximum="12" Value="0" Orientation="Vertical" Height="150" ValueChanged="EqSlider_ValueChanged" Tag="4" Style="{StaticResource MinimalSlider}"/>
-                                        <TextBlock Text="500Hz" FontSize="11" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" Margin="0,15,0,0"/>
-                                    </StackPanel>
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Slider x:Name="EqSlider5" Minimum="-12" Maximum="12" Value="0" Orientation="Vertical" Height="150" ValueChanged="EqSlider_ValueChanged" Tag="5" Style="{StaticResource MinimalSlider}"/>
-                                        <TextBlock Text="1kHz" FontSize="11" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" Margin="0,15,0,0"/>
-                                    </StackPanel>
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Slider x:Name="EqSlider6" Minimum="-12" Maximum="12" Value="0" Orientation="Vertical" Height="150" ValueChanged="EqSlider_ValueChanged" Tag="6" Style="{StaticResource MinimalSlider}"/>
-                                        <TextBlock Text="2kHz" FontSize="11" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" Margin="0,15,0,0"/>
-                                    </StackPanel>
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Slider x:Name="EqSlider7" Minimum="-12" Maximum="12" Value="0" Orientation="Vertical" Height="150" ValueChanged="EqSlider_ValueChanged" Tag="7" Style="{StaticResource MinimalSlider}"/>
-                                        <TextBlock Text="4kHz" FontSize="11" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" Margin="0,15,0,0"/>
-                                    </StackPanel>
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Slider x:Name="EqSlider8" Minimum="-12" Maximum="12" Value="0" Orientation="Vertical" Height="150" ValueChanged="EqSlider_ValueChanged" Tag="8" Style="{StaticResource MinimalSlider}"/>
-                                        <TextBlock Text="8kHz" FontSize="11" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" Margin="0,15,0,0"/>
-                                    </StackPanel>
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Slider x:Name="EqSlider9" Minimum="-12" Maximum="12" Value="0" Orientation="Vertical" Height="150" ValueChanged="EqSlider_ValueChanged" Tag="9" Style="{StaticResource MinimalSlider}"/>
-                                        <TextBlock Text="16kHz" FontSize="11" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" Margin="0,15,0,0"/>
-                                    </StackPanel>
-                                </UniformGrid>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Background="#0D0D0D" Margin="0,20,0,0" Padding="30" CornerRadius="12">
-                            <StackPanel>
-                                <TextBlock Text="Playlists &amp; Settings Backup" FontSize="20" FontWeight="Bold" Margin="0,0,0,25"/>
-                                <TextBlock Text="If you just upgraded or unzipped AudioWin into a new folder, you can import your old playlists and settings below." FontSize="13" Foreground="{StaticResource GrayBrush}" TextWrapping="Wrap" Margin="0,0,0,20"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <Button x:Name="BtnImportBackup" Content="Import Playlist / Settings File..." Click="BtnImportBackup_Click" Style="{StaticResource SidebarButton}" Width="260" Margin="0,0,20,0"/>
-                                    <Button x:Name="BtnExportBackup" Content="Export Current Backup..." Click="BtnExportBackup_Click" Style="{StaticResource SidebarButton}" Width="220"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- Stats View -->
-                    <StackPanel x:Name="StatsGrid" Margin="50,40" Visibility="Collapsed">
-                        <TextBlock Text="Your Statistics" FontSize="48" FontWeight="Bold" Margin="0,0,0,50"/>
-                        <UniformGrid Columns="2" Margin="0,0,0,40">
-                            <Border Background="#0D0D0D" Margin="0,0,20,20" Padding="30" CornerRadius="12">
+                            <UniformGrid x:Name="EqGrid" Columns="10" Height="220">
                                 <StackPanel>
-                                    <TextBlock Text="Total Listened Time" FontSize="14" Foreground="{StaticResource GrayBrush}" Margin="0,0,0,10"/>
-                                    <TextBlock x:Name="StatTotalTime" Text="0 hours" FontSize="32" FontWeight="Bold"/>
+                                    <TextBlock x:Name="EqVal0" Text="0" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <Slider x:Name="EqSlider0" Style="{StaticResource Sld.EqVertical}" Minimum="-12" Maximum="12" Value="0" Height="150" Tag="0" ValueChanged="EqSlider_ValueChanged"/>
+                                    <TextBlock Text="32" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
                                 </StackPanel>
-                            </Border>
-                            <Border Background="#0D0D0D" Margin="20,0,0,20" Padding="30" CornerRadius="12">
                                 <StackPanel>
-                                    <TextBlock Text="Songs Played" FontSize="14" Foreground="{StaticResource GrayBrush}" Margin="0,0,0,10"/>
-                                    <TextBlock x:Name="StatTotalPlayed" Text="0" FontSize="32" FontWeight="Bold"/>
+                                    <TextBlock x:Name="EqVal1" Text="0" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <Slider x:Name="EqSlider1" Style="{StaticResource Sld.EqVertical}" Minimum="-12" Maximum="12" Value="0" Height="150" Tag="1" ValueChanged="EqSlider_ValueChanged"/>
+                                    <TextBlock Text="64" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
                                 </StackPanel>
-                            </Border>
-                            <Border Background="#0D0D0D" Margin="0,20,20,0" Padding="30" CornerRadius="12">
                                 <StackPanel>
-                                    <TextBlock Text="Most Played Playlist" FontSize="14" Foreground="{StaticResource GrayBrush}" Margin="0,0,0,10"/>
-                                    <TextBlock x:Name="StatMostPlayedPlaylist" Text="None yet" FontSize="32" FontWeight="Bold"/>
+                                    <TextBlock x:Name="EqVal2" Text="0" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <Slider x:Name="EqSlider2" Style="{StaticResource Sld.EqVertical}" Minimum="-12" Maximum="12" Value="0" Height="150" Tag="2" ValueChanged="EqSlider_ValueChanged"/>
+                                    <TextBlock Text="125" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
                                 </StackPanel>
-                            </Border>
-                            <Border Background="#0D0D0D" Margin="20,20,0,0" Padding="30" CornerRadius="12">
                                 <StackPanel>
-                                    <TextBlock Text="First Listened Song" FontSize="14" Foreground="{StaticResource GrayBrush}" Margin="0,0,0,10"/>
-                                    <TextBlock x:Name="StatFirstSong" Text="None yet" FontSize="24" FontWeight="Bold" TextWrapping="Wrap"/>
+                                    <TextBlock x:Name="EqVal3" Text="0" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <Slider x:Name="EqSlider3" Style="{StaticResource Sld.EqVertical}" Minimum="-12" Maximum="12" Value="0" Height="150" Tag="3" ValueChanged="EqSlider_ValueChanged"/>
+                                    <TextBlock Text="250" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
                                 </StackPanel>
-                            </Border>
-                        </UniformGrid>
-                    </StackPanel>
-
-                    <!-- Playlist Detail View -->
-                    <StackPanel x:Name="SongsView" Visibility="Collapsed">
-                        <Grid Margin="50,60,50,40">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="232"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <Border Width="232" Height="232" Background="#0D0D0D" CornerRadius="12" BorderBrush="{StaticResource HoverBrush}" BorderThickness="1" ClipToBounds="True" Cursor="Hand" MouseLeftButtonUp="BtnChangeCover_Click">
-                                <Grid>
-                                    <Image x:Name="DetailCoverImage" Stretch="UniformToFill"/>
-                                    <TextBlock x:Name="DetailDefaultText" Text="" FontSize="72" FontWeight="Black" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Grid>
-                            </Border>
-
-                            <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="35,0,0,0">
-                                <TextBlock Text="PLAYLIST" FontSize="12" FontWeight="Bold" Margin="0,0,0,10" Opacity="0.7"/>
-                                <TextBlock x:Name="DetailTitle" Text="Playlist Name" FontSize="86" FontWeight="Black" Margin="0,-15,0,10"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock x:Name="DetailStats" Text="0 songs, about 0 min" Foreground="{StaticResource GrayBrush}"/>
+                                <StackPanel>
+                                    <TextBlock x:Name="EqVal4" Text="0" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <Slider x:Name="EqSlider4" Style="{StaticResource Sld.EqVertical}" Minimum="-12" Maximum="12" Value="0" Height="150" Tag="4" ValueChanged="EqSlider_ValueChanged"/>
+                                    <TextBlock Text="500" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
                                 </StackPanel>
+                                <StackPanel>
+                                    <TextBlock x:Name="EqVal5" Text="0" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <Slider x:Name="EqSlider5" Style="{StaticResource Sld.EqVertical}" Minimum="-12" Maximum="12" Value="0" Height="150" Tag="5" ValueChanged="EqSlider_ValueChanged"/>
+                                    <TextBlock Text="1k" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock x:Name="EqVal6" Text="0" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <Slider x:Name="EqSlider6" Style="{StaticResource Sld.EqVertical}" Minimum="-12" Maximum="12" Value="0" Height="150" Tag="6" ValueChanged="EqSlider_ValueChanged"/>
+                                    <TextBlock Text="2k" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock x:Name="EqVal7" Text="0" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <Slider x:Name="EqSlider7" Style="{StaticResource Sld.EqVertical}" Minimum="-12" Maximum="12" Value="0" Height="150" Tag="7" ValueChanged="EqSlider_ValueChanged"/>
+                                    <TextBlock Text="4k" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock x:Name="EqVal8" Text="0" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <Slider x:Name="EqSlider8" Style="{StaticResource Sld.EqVertical}" Minimum="-12" Maximum="12" Value="0" Height="150" Tag="8" ValueChanged="EqSlider_ValueChanged"/>
+                                    <TextBlock Text="8k" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock x:Name="EqVal9" Text="0" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <Slider x:Name="EqSlider9" Style="{StaticResource Sld.EqVertical}" Minimum="-12" Maximum="12" Value="0" Height="150" Tag="9" ValueChanged="EqSlider_ValueChanged"/>
+                                    <TextBlock Text="16k" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                                </StackPanel>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- DISCORD -->
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Text="Discord Rich Presence" Style="{StaticResource Txt.Heading}" Margin="0,0,0,20"/>
+
+                            <Grid Margin="0,0,0,18">
+                                <StackPanel>
+                                    <TextBlock Text="Show what I'm listening to" FontSize="13.5"/>
+                                    <TextBlock Text="Appears on your Discord profile as a listening activity."
+                                               Style="{StaticResource Txt.Muted}" FontSize="12" Margin="0,3,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="ToggleDiscord" Style="{StaticResource Sw.Toggle}"
+                                          HorizontalAlignment="Right" Click="ToggleDiscord_Click"/>
+                            </Grid>
+
+                            <Grid>
+                                <StackPanel>
+                                    <TextBlock Text="Include a link button" FontSize="13.5"/>
+                                    <TextBlock Text="Adds a 'Download' button linking to AudioWin.lol on your Discord profile."
+                                               Style="{StaticResource Txt.Muted}" FontSize="12" Margin="0,3,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="ToggleDiscordButton" Style="{StaticResource Sw.Toggle}"
+                                          HorizontalAlignment="Right" Click="ToggleDiscordButton_Click"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- LINK IMPORT KEYS -->
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Text="Link import" Style="{StaticResource Txt.Heading}" Margin="0,0,0,6"/>
+                            <TextBlock TextWrapping="Wrap" Style="{StaticResource Txt.Muted}" FontSize="12.5" Margin="0,0,0,22"
+                                       Text="Single YouTube videos and Spotify tracks import with no setup at all. Adding your own free API keys below also unlocks importing whole playlists and albums in one paste. Keys are stored locally on this PC only."/>
+
+                            <TextBlock Text="YouTube Data API key" Style="{StaticResource Txt.Label}" Margin="0,0,0,7"/>
+                            <TextBox x:Name="TxtYouTubeKey" Style="{StaticResource Tb.Field}" Margin="0,0,0,6"
+                                     local:Ui.Watermark="Paste your YouTube Data API v3 key"/>
+                            <TextBlock Text="Get one free at console.cloud.google.com — create a project, enable 'YouTube Data API v3', then make an API key."
+                                       Style="{StaticResource Txt.Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="2,0,0,20"/>
+
+                            <TextBlock Text="Spotify Client ID" Style="{StaticResource Txt.Label}" Margin="0,0,0,7"/>
+                            <TextBox x:Name="TxtSpotifyId" Style="{StaticResource Tb.Field}" Margin="0,0,0,12"
+                                     local:Ui.Watermark="Paste your Spotify app Client ID"/>
+                            <TextBlock Text="Spotify Client Secret" Style="{StaticResource Txt.Label}" Margin="0,0,0,7"/>
+                            <PasswordBox x:Name="TxtSpotifySecret" Height="42" Padding="14,0" Margin="0,0,0,6"
+                                         Background="{DynamicResource B.Elevated}"
+                                         Foreground="{DynamicResource B.Text}"
+                                         BorderBrush="{DynamicResource B.Stroke}" BorderThickness="1"
+                                         FontSize="13.5" VerticalContentAlignment="Center"/>
+                            <TextBlock Text="Get these free at developer.spotify.com/dashboard — create an app and copy the Client ID and Secret."
+                                       Style="{StaticResource Txt.Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="2,0,0,20"/>
+
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Save keys" Style="{StaticResource Btn.Primary}"
+                                        Click="BtnSaveKeys_Click" Margin="0,0,12,0"/>
+                                <Button Content="Clear keys" Style="{StaticResource Btn.Secondary}"
+                                        Click="BtnClearKeys_Click"/>
                             </StackPanel>
-                        </Grid>
+                        </StackPanel>
+                    </Border>
 
-                        <Grid Margin="50,0,50,20">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button x:Name="BtnDetailPlay" Width="56" Height="56" Background="White" Foreground="Black" Click="BtnPlayPause_Click" Margin="0,0,25,0">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" CornerRadius="28">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                    <Path x:Name="BtnDetailPlayIcon" Data="M 0,0 L 16,10 L 0,20 Z" Fill="Black" Stretch="Uniform" Width="20" Height="20" Margin="4,0,0,0"/>
-                                </Button>
+                    <!-- BACKUP -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Backup and data" Style="{StaticResource Txt.Heading}" Margin="0,0,0,6"/>
+                            <TextBlock Text="Playlists, settings and stats live in your AppData folder. Move them to a new PC, or restore an older copy, here."
+                                       Style="{StaticResource Txt.Muted}" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,22"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="BtnImportBackup" Content="Import backup…" Style="{StaticResource Btn.Secondary}"
+                                        Click="BtnImportBackup_Click" Margin="0,0,12,0"/>
+                                <Button x:Name="BtnExportBackup" Content="Export backup…" Style="{StaticResource Btn.Secondary}"
+                                        Click="BtnExportBackup_Click" Margin="0,0,12,0"/>
+                                <Button x:Name="BtnOpenDataFolder" Content="Open data folder" Style="{StaticResource Btn.Secondary}"
+                                        Click="BtnOpenDataFolder_Click"/>
                             </StackPanel>
-
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <Border Background="{StaticResource HoverBrush}" CornerRadius="6" Padding="10,6" Margin="0,0,20,0">
-                                    <Grid Width="180">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Path Data="M 15.5,14 H 14.7 L 14.4,13.7 C 15.4,12.6 16,11.1 16,9.5 C 16,5.9 13.1,3 9.5,3 C 5.9,3 3,5.9 3,9.5 C 3,13.1 5.9,16 9.5,16 C 11.1,16 12.6,15.4 13.7,14.4 L 14,14.7 V 15.5 L 19,20.5 L 20.5,19 L 15.5,14 Z M 9.5,14 C 7,14 5,12 5,9.5 C 5,7 7,5 9.5,5 C 12,5 14,7 14,9.5 C 14,12 12,14 9.5,14 Z" Fill="{StaticResource GrayBrush}" Stretch="Uniform" Width="16" Height="16" Margin="0,0,10,0"/>
-                                        <TextBox x:Name="TxtSongSearch" Grid.Column="1" Background="Transparent" BorderThickness="0" Foreground="White" local:PlaceholderBehavior.Placeholder="Search in playlist" TextChanged="TxtSongSearch_TextChanged"/>
-                                    </Grid>
-                                </Border>
-                                <TextBlock Text="Sort by:" Foreground="{StaticResource GrayBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                <ComboBox x:Name="ComboSort" Width="150" VerticalAlignment="Center" SelectionChanged="ComboSort_SelectionChanged">
-                                    <ComboBoxItem Content="Custom order" IsSelected="True"/>
-                                    <ComboBoxItem Content="Title"/>
-                                    <ComboBoxItem Content="Artist"/>
-                                    <ComboBoxItem Content="Duration"/>
-                                </ComboBox>
-                            </StackPanel>
-                        </Grid>
-
-                        <!-- Header Labels -->
-                        <Grid Margin="50,10,50,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="50"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="120"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="#" Foreground="{StaticResource GrayBrush}" FontSize="11" FontWeight="Bold" Margin="20,0,0,0"/>
-                            <TextBlock Grid.Column="1" Text="TITLE" Foreground="{StaticResource GrayBrush}" FontSize="11" FontWeight="Bold"/>
-                            <TextBlock Grid.Column="2" Text="ARTIST" Foreground="{StaticResource GrayBrush}" FontSize="11" FontWeight="Bold"/>
-                            <Path Grid.Column="3" Data="M 12,2 C 6.48,2 2,6.48 2,12 C 2,17.52 6.48,22 12,22 C 17.52,22 22,17.52 22,12 C 22,6.48 17.52,2 12,2 Z M 16.2,16.2 L 11,13 V 7 H 12.5 V 12.2 L 17,14.9 L 16.2,16.2 Z" Fill="{StaticResource GrayBrush}" Stretch="Uniform" Width="14" Height="14" HorizontalAlignment="Left" Margin="0,0,0,0"/>
-                        </Grid>
-                        <Separator Margin="50,10" Background="{StaticResource HoverBrush}" Height="1"/>
-
-                        <!-- Empty State -->
-                        <Border x:Name="EmptyPlaylistState" Height="300" Margin="50,0" Background="{StaticResource SecondaryBrush}" BorderBrush="{StaticResource HoverBrush}" BorderThickness="1" CornerRadius="12" Cursor="Hand" MouseLeftButtonUp="EmptyStateAdd_Click" Visibility="Collapsed">
-                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <Path Data="M12,2 C6.48,2 2,6.48 2,12 C2,17.52 6.48,22 12,22 C17.52,22 22,17.52 22,12 C22,6.48 17.52,2 12,2 Z M12,7 V17 M7,12 H17" 
-                                      Stroke="{StaticResource GrayBrush}" StrokeThickness="1.5" Fill="Transparent" Stretch="Uniform" Width="48" Height="48" Margin="0,0,0,20"/>
-                                <TextBlock Text="Add Audio Files" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
-                                <TextBlock Text="Click to browse your music library" FontSize="13" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" Margin="0,8,0,0"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Song List -->
-                        <ListBox x:Name="SongsGrid" Margin="50,0" Background="Transparent" BorderThickness="0" 
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"
-                                 MouseDoubleClick="SongsGrid_MouseDoubleClick">
-                            <ListBox.ItemContainerStyle>
-                                <Style TargetType="ListBoxItem">
-                                    <Setter Property="Background" Value="Transparent"/>
-                                    <Setter Property="BorderThickness" Value="0"/>
-                                    <Setter Property="Padding" Value="0"/>
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="ListBoxItem">
-                                                <Border x:Name="Bd" Padding="10,0" CornerRadius="6" Background="Transparent" Margin="0,2">
-                                                    <ContentPresenter/>
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBrush}"/>
-                                                    </Trigger>
-                                                    <Trigger Property="IsSelected" Value="True">
-                                                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource SelectionBrush}"/>
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </ListBox.ItemContainerStyle>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Height="56">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="50"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="120"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Grid Margin="10,0,0,0">
-                                            <TextBlock x:Name="IndexText" Text="{Binding Index}" VerticalAlignment="Center" Foreground="{StaticResource GrayBrush}" FontSize="14"/>
-                                        </Grid>
-
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" Foreground="White"/>
-                                        </StackPanel>
-
-                                        <TextBlock Grid.Column="2" Text="{Binding Artist}" VerticalAlignment="Center" Foreground="{StaticResource GrayBrush}" FontSize="14"/>
-
-                                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                            <TextBlock Text="{Binding Duration}" Foreground="{StaticResource GrayBrush}" FontSize="14" Width="50"/>
-                                            <ToggleButton IsChecked="{Binding IsLiked, Mode=TwoWay}" Click="BtnTrackLike_Click" Background="Transparent" BorderThickness="0" Width="20" Height="20" Margin="15,0,0,0">
-                                                <ToggleButton.Template>
-                                                    <ControlTemplate TargetType="ToggleButton">
-                                                        <Path x:Name="Icon" Data="M 12,21.35 L 10.55,20.03 C 5.4,15.36 2,12.27 2,8.5 C 2,5.41 4.41,3 7.5,3 C 9.24,3 10.91,3.81 12,5.08 C 13.09,3.81 14.76,3 16.5,3 C 19.59,3 22,5.41 22,8.5 C 22,12.27 18.6,15.36 13.45,20.03 L 12,21.35 Z" 
-                                                              Fill="{StaticResource GrayBrush}" Stretch="Uniform" Opacity="0.5"/>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsChecked" Value="True">
-                                                                <Setter TargetName="Icon" Property="Fill" Value="White"/>
-                                                                <Setter TargetName="Icon" Property="Opacity" Value="1"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </ToggleButton.Template>
-                                            </ToggleButton>
-                                        </StackPanel>
-                                    </Grid>
-                                    <!-- DataTemplate.Triggers removed for PlayIcon -->
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-
-                        <Button x:Name="BtnAddAudio" Content="+ Add more tracks" Style="{StaticResource SidebarButton}" Margin="50,30,0,100" Click="BtnAddAudio_Click"/>
-                    </StackPanel>
-                </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
             </ScrollViewer>
-        </Grid>
 
-        <!-- Player Bar -->
-        <Border Grid.Row="2" Grid.ColumnSpan="2" Background="{StaticResource BackgroundBrush}" BorderBrush="{StaticResource SecondaryBrush}" BorderThickness="0,1,0,0">
-            <Grid Margin="35,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="380"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="380"/>
-                </Grid.ColumnDefinitions>
+            <!-- ======================== PLAYLIST DETAIL ====================== -->
+            <!-- The hero stays pinned and only the track list scrolls. That keeps
+                 the ListBox virtualising, which the old nested-ScrollViewer layout
+                 could not do - it realised every row in the playlist at once. -->
+            <Grid x:Name="DetailView" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-                <!-- Now Playing -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="72" Height="72" Background="#0D0D0D" CornerRadius="8" Margin="0,0,20,0" ClipToBounds="True">
+                <!-- hero -->
+                <Grid Grid.Row="0" Margin="42,30,42,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Width="152" Height="152" CornerRadius="16" ClipToBounds="True" Cursor="Hand"
+                            Background="{DynamicResource B.ArtPlaceholder}"
+                            MouseLeftButtonUp="DetailCover_Click" ToolTip="Change cover">
                         <Grid>
-                            <Image x:Name="PlayerCoverImage" Stretch="UniformToFill"/>
-                            <Path x:Name="PlayerDefaultIcon" Data="M9,17 C9,15.3 7.7,14 6,14 C4.3,14 3,15.3 3,17 C3,18.7 4.3,20 6,20 C7.7,20 9,18.7 9,17 Z M9,17 V3 H17 V7" 
-                                  Stroke="{StaticResource GrayBrush}" StrokeThickness="1.8" Fill="Transparent" Stretch="Uniform" Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="DetailDefaultText" Text="" FontSize="54" FontWeight="Bold"
+                                       Foreground="{DynamicResource B.TextDim}" Opacity="0.6"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Image x:Name="DetailCoverImage" Stretch="UniformToFill"/>
                         </Grid>
                     </Border>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock x:Name="TxtNowPlayingTitle" Text="Not Playing" FontSize="16" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <TextBlock x:Name="TxtNowPlayingArtist" Text="Select a track" FontSize="13" Foreground="{StaticResource GrayBrush}"/>
-                    </StackPanel>
-                    <ToggleButton x:Name="BtnLikeCurrent" Click="BtnLikeCurrent_Click" Background="Transparent" Margin="20,0,0,0" BorderThickness="0" Width="20" Height="20">
-                        <ToggleButton.Template>
-                            <ControlTemplate TargetType="ToggleButton">
-                                <Path x:Name="Icon" Data="M 12,21.35 L 10.55,20.03 C 5.4,15.36 2,12.27 2,8.5 C 2,5.41 4.41,3 7.5,3 C 9.24,3 10.91,3.81 12,5.08 C 13.09,3.81 14.76,3 16.5,3 C 19.59,3 22,5.41 22,8.5 C 22,12.27 18.6,15.36 13.45,20.03 L 12,21.35 Z" 
-                                      Fill="{StaticResource GrayBrush}" Stretch="Uniform" Opacity="0.5"/>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsChecked" Value="True">
-                                        <Setter TargetName="Icon" Property="Fill" Value="White"/>
-                                        <Setter TargetName="Icon" Property="Opacity" Value="1"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </ToggleButton.Template>
-                    </ToggleButton>
-                </StackPanel>
 
-                <!-- Controls -->
-                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
-                        <Button x:Name="BtnShufflePlayer" Width="40" Height="40" Background="Transparent" Margin="0,0,30,0" Click="BtnShuffle_Click" ToolTip="Shuffle">
-                            <Path x:Name="IconShuffle" Data="M 10.59,9.17 L 5.41,4 L 4,5.41 L 9.17,10.58 L 10.59,9.17 Z M 14.5,4 L 16.29,5.71 L 4,18 L 5.41,19.41 L 17.7,7.12 L 19.41,8.83 L 19.41,4 L 14.5,4 Z M 14.5,14.83 L 13.08,16.25 L 16.29,19.46 L 17.7,18.05 L 14.5,14.83 Z" Fill="{StaticResource GrayBrush}" Stretch="Uniform" Width="20" Height="20"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="26,0,0,6">
+                        <TextBlock x:Name="DetailKind" Text="PLAYLIST" Style="{StaticResource Txt.Label}"/>
+                        <TextBlock x:Name="DetailTitle" Text="Playlist" FontSize="46" FontWeight="Bold"
+                                   Margin="0,6,0,0" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource B.Text}"/>
+                        <TextBlock x:Name="DetailStats" Text="0 tracks" Style="{StaticResource Txt.Muted}"
+                                   Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- toolbar -->
+                <Grid Grid.Row="1" Margin="42,24,42,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="BtnDetailPlay" Style="{StaticResource Btn.PlayPrimary}"
+                                Click="BtnDetailPlay_Click" ToolTip="Play">
+                            <Path x:Name="BtnDetailPlayIcon" Data="{StaticResource I.Play}" Stretch="Uniform"
+                                  Width="20" Height="20" Margin="2,0,0,0"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                         </Button>
-                        <Button Width="44" Height="44" Margin="0,0,25,0" Click="BtnPrev_Click" ToolTip="Previous Track">
-                            <Path Data="M 12,0 L 0,10 L 12,20 Z M 0,0 L 2,0 L 2,20 L 0,20 Z" Fill="White" Stretch="Uniform" Width="16" Height="16"/>
+
+                        <Button x:Name="BtnDetailShuffle" Style="{StaticResource Btn.Icon}" Margin="16,0,0,0"
+                                Click="BtnDetailShuffle_Click" ToolTip="Shuffle this playlist">
+                            <Path Data="{StaticResource I.Shuffle}" Stretch="Uniform" Width="19" Height="19"
+                                  Fill="Transparent" StrokeThickness="1.7" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                         </Button>
-                        <Button x:Name="BtnPlayPause" Style="{StaticResource PlayerPlayButton}" Click="BtnPlayPause_Click" Margin="0,0,25,0" ToolTip="Play/Pause (Space)">
-                            <Path x:Name="BtnPlayPauseIcon" Data="M 0,0 L 16,10 L 0,20 Z" Fill="Black" Stretch="Uniform" Width="18" Height="18" Margin="4,0,0,0"/>
+
+                        <Button x:Name="BtnDownloadPlaylist" Style="{StaticResource Btn.Icon}"
+                                Click="BtnDownloadPlaylist_Click" ToolTip="Download whole playlist">
+                            <Path Data="{StaticResource I.Download}" Stretch="Uniform" Width="18" Height="18"
+                                  Fill="Transparent" StrokeThickness="1.7" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                         </Button>
-                        <Button Width="44" Height="44" Margin="0,0,30,0" Click="BtnNext_Click" ToolTip="Next Track">
-                            <Path Data="M 0,0 L 12,10 L 0,20 Z M 10,0 L 12,0 L 12,20 L 10,20 Z" Fill="White" Stretch="Uniform" Width="16" Height="16"/>
+
+                        <Button x:Name="BtnAddAudioTop" Style="{StaticResource Btn.Icon}"
+                                Click="BtnAddAudio_Click" ToolTip="Add audio files">
+                            <Path Data="{StaticResource I.Plus}" Stretch="Uniform" Width="18" Height="18"
+                                  Fill="Transparent" StrokeThickness="1.9" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                         </Button>
-                        <Button x:Name="BtnRepeat" Width="40" Height="40" Background="Transparent" Click="BtnRepeat_Click" ToolTip="Repeat">
-                            <Grid>
-                                <Path x:Name="IconRepeat" Data="M 7,7 H 17 V 10 L 21,6 L 17,2 V 5 H 5 V 11 H 7 V 7 Z M 17,17 H 7 V 14 L 3,18 L 7,22 V 19 H 19 V 13 H 17 V 17 Z" Fill="{StaticResource GrayBrush}" Stretch="Uniform" Width="20" Height="20"/>
-                                <TextBlock x:Name="TxtRepeatState" Text="" FontSize="10" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,0"/>
-                            </Grid>
+
+                        <Button x:Name="BtnImportLinkDetail" Style="{StaticResource Btn.Icon}"
+                                Click="BtnImportLink_Click" ToolTip="Add from a YouTube, Spotify, or SoundCloud link">
+                            <Path Data="{StaticResource I.Link}" Stretch="Uniform" Width="18" Height="18"
+                                  Fill="Transparent" StrokeThickness="1.7" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </Button>
+
+                        <Button x:Name="BtnMatchFiles" Style="{StaticResource Btn.Icon}"
+                                Click="BtnMatchFiles_Click" ToolTip="Match imported tracks to files on this PC">
+                            <Path Data="{StaticResource I.Wand}" Stretch="Uniform" Width="18" Height="18"
+                                  Fill="Transparent" StrokeThickness="1.7" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                         </Button>
                     </StackPanel>
-                    
-                    <Grid MaxWidth="800" HorizontalAlignment="Stretch">
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Border Height="38" CornerRadius="10" Width="200" Padding="12,0" Margin="0,0,12,0"
+                                Background="{DynamicResource B.Elevated}"
+                                BorderBrush="{DynamicResource B.Stroke}" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Path Data="{StaticResource I.Search}" Stretch="Uniform" Width="14" Height="14"
+                                      Stroke="{DynamicResource B.TextDim}" StrokeThickness="1.7" Fill="Transparent"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" VerticalAlignment="Center"/>
+                                <TextBox x:Name="TxtSongSearch" Grid.Column="1" Style="{StaticResource Tb.Bare}"
+                                         Margin="10,0,0,0" local:Ui.Watermark="Search in playlist"
+                                         TextChanged="TxtSongSearch_TextChanged"/>
+                            </Grid>
+                        </Border>
+                        <ComboBox x:Name="ComboSort" Width="164" SelectionChanged="ComboSort_SelectionChanged">
+                            <ComboBoxItem Content="Custom order" IsSelected="True"/>
+                            <ComboBoxItem Content="Title"/>
+                            <ComboBoxItem Content="Artist"/>
+                            <ComboBoxItem Content="Duration"/>
+                            <ComboBoxItem Content="Recently added"/>
+                            <ComboBoxItem Content="Most played"/>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
+
+                <!-- column headings -->
+                <Grid Grid.Row="2" Margin="56,26,56,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="42"/>
+                        <ColumnDefinition Width="58"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="0.85*"/>
+                        <ColumnDefinition Width="76"/>
+                        <ColumnDefinition Width="46"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="#" Style="{StaticResource Txt.Label}" HorizontalAlignment="Center"/>
+                    <TextBlock Grid.Column="2" Text="TITLE" Style="{StaticResource Txt.Label}" Margin="14,0,0,0"/>
+                    <TextBlock Grid.Column="3" Text="ARTIST" Style="{StaticResource Txt.Label}"/>
+                    <TextBlock Grid.Column="4" Text="TIME" Style="{StaticResource Txt.Label}"/>
+                    <Border Grid.ColumnSpan="6" Height="1" VerticalAlignment="Bottom" Margin="0,0,0,-10"
+                            Background="{DynamicResource B.StrokeSoft}"/>
+                </Grid>
+
+                <!-- track list -->
+                <Grid Grid.Row="3" Margin="0,16,0,0">
+                    <ListBox x:Name="SongsGrid" Margin="42,0,36,16" Style="{StaticResource Lb.Plain}"
+                             ItemContainerStyle="{StaticResource Li.Song}"
+                             ItemTemplate="{StaticResource T.SongRow}"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling"
+                             ScrollViewer.CanContentScroll="True"
+                             MouseDoubleClick="SongsGrid_MouseDoubleClick"
+                             PreviewMouseRightButtonDown="SongsGrid_PreviewMouseRightButtonDown"/>
+
+                    <Border x:Name="EmptyPlaylistState" Style="{StaticResource Card}" Margin="42,0,42,40"
+                            VerticalAlignment="Top" Padding="48" Cursor="Hand" Visibility="Collapsed"
+                            MouseLeftButtonUp="EmptyStateAdd_Click">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Path Data="{StaticResource I.Plus}" Stretch="Uniform" Width="36" Height="36"
+                                  Stroke="{DynamicResource B.TextDim}" StrokeThickness="1.4" Fill="Transparent"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="EmptyStateTitle" Text="Add audio files"
+                                       Style="{StaticResource Txt.Heading}" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+                            <TextBlock x:Name="EmptyStateSub" Text="Click to browse, or drag files straight in"
+                                       Style="{StaticResource Txt.Muted}" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- ==============================================================
+             PLAYER BAR
+             ============================================================== -->
+        <Border Grid.Row="2" Grid.ColumnSpan="2" Background="{DynamicResource B.Surface}"
+                BorderBrush="{DynamicResource B.StrokeSoft}" BorderThickness="0,1,0,0">
+            <Grid Margin="24,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="330"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="330"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- now playing -->
+                <Grid Grid.Column="0" VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Width="64" Height="64" CornerRadius="12" ClipToBounds="True"
+                            Background="{DynamicResource B.ArtPlaceholder}">
+                        <Grid>
+                            <Path x:Name="PlayerDefaultIcon" Data="{StaticResource I.Music}" Stretch="Uniform"
+                                  Width="22" Height="22" Stroke="{DynamicResource B.TextDim}"
+                                  StrokeThickness="1.5" Fill="Transparent"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Image x:Name="PlayerCoverImage" Stretch="UniformToFill"/>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="16,0,10,0">
+                        <TextBlock x:Name="TxtNowPlayingTitle" Text="Not playing" FontSize="14.5"
+                                   FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="TxtNowPlayingArtist" Text="Choose a track" FontSize="12.5"
+                                   Foreground="{DynamicResource B.TextMuted}" Margin="0,4,0,0"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+
+                    <ToggleButton x:Name="BtnLikeCurrent" Grid.Column="2" Style="{StaticResource Toggle.Like}"
+                                  Click="BtnLikeCurrent_Click"/>
+                </Grid>
+
+                <!-- transport -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" MaxWidth="720">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,10">
+                        <ToggleButton x:Name="BtnShuffle" Style="{StaticResource Toggle.Transport}"
+                                      Margin="0,0,10,0" Click="BtnShuffle_Click" ToolTip="Shuffle">
+                            <Path Data="{StaticResource I.Shuffle}" Stretch="Uniform" Width="18" Height="18"
+                                  Fill="Transparent" StrokeThickness="1.7" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                        </ToggleButton>
+
+                        <Button x:Name="BtnPrev" Style="{StaticResource Btn.Icon}" Width="42" Height="42"
+                                Margin="0,0,8,0" Click="BtnPrev_Click" ToolTip="Previous track">
+                            <Path Data="{StaticResource I.Prev}" Stretch="Uniform" Width="17" Height="17"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </Button>
+
+                        <Button x:Name="BtnPlayPause" Style="{StaticResource Btn.PlayPrimary}"
+                                Click="BtnPlayPause_Click" ToolTip="Play / pause  (Space)">
+                            <Path x:Name="BtnPlayPauseIcon" Data="{StaticResource I.Play}" Stretch="Uniform"
+                                  Width="19" Height="19" Margin="2,0,0,0"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </Button>
+
+                        <Button x:Name="BtnNext" Style="{StaticResource Btn.Icon}" Width="42" Height="42"
+                                Margin="8,0,10,0" Click="BtnNext_Click" ToolTip="Next track">
+                            <Path Data="{StaticResource I.Next}" Stretch="Uniform" Width="17" Height="17"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </Button>
+
+                        <ToggleButton x:Name="BtnRepeat" Style="{StaticResource Toggle.Transport}"
+                                      Click="BtnRepeat_Click" ToolTip="Repeat">
+                            <Grid>
+                                <Path Data="{StaticResource I.Repeat}" Stretch="Uniform" Width="18" Height="18"
+                                      Fill="Transparent" StrokeThickness="1.7" StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                <TextBlock x:Name="TxtRepeatBadge" Text="" FontSize="8.5" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Margin="0,1,0,0"
+                                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                            </Grid>
+                        </ToggleButton>
+                    </StackPanel>
+
+                    <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="50"/>
+                            <ColumnDefinition Width="46"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="50"/>
+                            <ColumnDefinition Width="46"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="TxtCurrentTime" Text="0:00" FontSize="11" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        <Slider x:Name="PlaybackSlider" Grid.Column="1" Margin="20,0" Style="{StaticResource MinimalSlider}" 
-                                Minimum="0" Maximum="100" Focusable="False" IsMoveToPointEnabled="True"
-                                PreviewMouseDown="PlaybackSlider_MouseDown" PreviewMouseUp="PlaybackSlider_MouseUp"
+                        <TextBlock x:Name="TxtCurrentTime" Text="0:00" FontSize="11"
+                                   Foreground="{DynamicResource B.TextDim}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Slider x:Name="PlaybackSlider" Grid.Column="1" Margin="10,0"
+                                Style="{StaticResource Sld.Progress}" Minimum="0" Maximum="1000"
+                                PreviewMouseLeftButtonDown="PlaybackSlider_MouseDown"
+                                PreviewMouseLeftButtonUp="PlaybackSlider_MouseUp"
                                 ValueChanged="PlaybackSlider_ValueChanged"/>
-                        <TextBlock x:Name="TxtTotalTime" Grid.Column="2" Text="0:00" FontSize="11" Foreground="{StaticResource GrayBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtTotalTime" Grid.Column="2" Text="0:00" FontSize="11"
+                                   Foreground="{DynamicResource B.TextDim}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Grid>
                 </StackPanel>
 
-                <!-- Extras -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Button Width="40" Height="40" Background="Transparent" Margin="0,0,20,0" Click="BtnQueue_Click">
-                        <Path Data="M 15,6 H 3 V 8 H 15 V 6 Z M 15,10 H 3 V 12 H 15 V 10 Z M 3,16 H 11 V 14 H 3 V 16 Z M 13,14 V 20 L 18,17 L 13,14 Z" Fill="{StaticResource GrayBrush}" Stretch="Uniform" Width="20" Height="20"/>
+                <!-- extras -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                    <Canvas x:Name="WaveformCanvas" Width="104" Height="34" Margin="0,0,18,0"
+                            VerticalAlignment="Center"/>
+
+                    <Button x:Name="BtnQueue" Style="{StaticResource Btn.Icon}" Margin="0,0,4,0"
+                            Click="BtnQueue_Click" ToolTip="Queue">
+                        <Path Data="{StaticResource I.Queue}" Stretch="Uniform" Width="18" Height="18"
+                              Fill="Transparent" StrokeThickness="1.7" StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                     </Button>
-                    <Canvas x:Name="WaveformCanvas" Width="120" Height="60" Margin="0,0,30,0"/>
-                    <Path Data="M 3,9 V 15 H 7 L 12,20 V 4 L 7,9 H 3 Z M 16.5,12 C 16.5,10.23 15.48,8.71 14,7.97 V 16.02 C 15.48,15.29 16.5,13.77 16.5,12 Z M 14,3.23 V 5.29 C 16.89,6.15 19,8.83 19,12 C 19,15.17 16.89,17.85 14,18.71 V 20.77 C 18.01,19.86 21,16.28 21,12 C 21,7.72 18.01,4.14 14,3.23 Z" Fill="White" Stretch="Uniform" Width="18" Height="18" Margin="0,0,15,0"/>
-                    <Slider x:Name="VolumeSlider" Width="100" Minimum="0" Maximum="100" Value="100" VerticalAlignment="Center" 
-                            Style="{StaticResource MinimalSlider}" IsMoveToPointEnabled="True"
+
+                    <Button x:Name="BtnMute" Style="{StaticResource Btn.Icon}" Click="BtnMute_Click" ToolTip="Mute">
+                        <Path x:Name="IconVolume" Data="{StaticResource I.VolumeHigh}" Stretch="Uniform"
+                              Width="18" Height="18" Fill="Transparent" StrokeThickness="1.7"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                    </Button>
+
+                    <Slider x:Name="VolumeSlider" Width="104" Margin="6,0,0,0" Minimum="0" Maximum="100"
+                            Value="70" VerticalAlignment="Center" Style="{StaticResource Sld.Progress}"
                             ValueChanged="VolumeSlider_ValueChanged"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Modals -->
-        <Border x:Name="ModalOverlay" Grid.RowSpan="3" Grid.ColumnSpan="2" Background="#F2000000" Visibility="Collapsed">
-            <Border Width="520" Background="{StaticResource SecondaryBrush}" Padding="50" VerticalAlignment="Center" CornerRadius="12">
-                <StackPanel>
-                    <TextBlock Text="Create New Playlist" FontSize="32" FontWeight="Bold" Margin="0,0,0,45"/>
-                    <TextBox x:Name="TxtPlaylistName" Background="Transparent" Foreground="White" BorderBrush="{StaticResource GrayBrush}" 
-                             BorderThickness="0,0,0,1" Padding="0,15" FontSize="22" Margin="0,0,0,50" 
-                             local:PlaceholderBehavior.Placeholder="Give your playlist a name..."/>
+        <!-- ==============================================================
+             QUEUE FLYOUT
+             ============================================================== -->
+        <Border x:Name="QueueScrim" Grid.RowSpan="3" Grid.ColumnSpan="2"
+                Background="{DynamicResource B.Scrim}" Opacity="0" Visibility="Collapsed"
+                MouseLeftButtonDown="QueueScrim_MouseDown"/>
+
+        <Border x:Name="QueueFlyout" Grid.Row="1" Grid.RowSpan="2" Grid.Column="1"
+                Width="360" HorizontalAlignment="Right" Visibility="Collapsed"
+                Background="{DynamicResource B.Surface}" BorderBrush="{DynamicResource B.Stroke}"
+                BorderThickness="1,0,0,0" RenderTransformOrigin="1,0.5">
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="QueueSlide" X="360"/>
+            </Border.RenderTransform>
+
+            <Grid Margin="22,22,16,22">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,18">
+                    <TextBlock Text="Queue" Style="{StaticResource Txt.Heading}" VerticalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="Cancel" Click="BtnCancelModal_Click" Margin="0,0,35,0" Foreground="{StaticResource GrayBrush}"/>
-                        <Button Content="Create Playlist" Click="BtnConfirmCreatePlaylist_Click" FontWeight="Bold" FontSize="18"/>
+                        <Button Style="{StaticResource Btn.IconSmall}" Click="BtnClearQueue_Click" ToolTip="Clear queue">
+                            <Path Data="{StaticResource I.Trash}" Stretch="Uniform" Width="15" Height="15"
+                                  Fill="Transparent" StrokeThickness="1.6" StrokeLineJoin="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </Button>
+                        <Button Style="{StaticResource Btn.IconSmall}" Click="QueueScrim_Click" ToolTip="Close">
+                            <Path Data="{StaticResource I.Close}" Stretch="Uniform" Width="14" Height="14"
+                                  Fill="Transparent" StrokeThickness="1.7" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Grid.Row="1" Text="NOW PLAYING" Style="{StaticResource Txt.Label}" Margin="0,0,0,10"/>
+
+                <Grid Grid.Row="2" Margin="0,0,0,22">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Width="42" Height="42" CornerRadius="9" ClipToBounds="True"
+                            Background="{DynamicResource B.ArtPlaceholder}">
+                        <Image x:Name="QueueNowArt" Stretch="UniformToFill"/>
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
+                        <TextBlock x:Name="QueueNowTitle" Text="Nothing playing" FontSize="13"
+                                   FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="QueueNowArtist" Text="" FontSize="11.5"
+                                   Foreground="{DynamicResource B.TextDim}" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid Grid.Row="3">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock x:Name="QueueUpNextLabel" Text="UP NEXT" Style="{StaticResource Txt.Label}" Margin="0,0,0,8"/>
+                    <ListBox x:Name="QueueList" Grid.Row="1" Style="{StaticResource Lb.Plain}"
+                             ItemContainerStyle="{StaticResource Li.Playlist}"
+                             ItemTemplate="{StaticResource T.QueueRow}"
+                             MouseDoubleClick="QueueList_MouseDoubleClick"/>
+                    <TextBlock x:Name="TxtQueueEmpty" Grid.Row="1" Text="Nothing queued up."
+                               Style="{StaticResource Txt.Muted}" FontSize="12.5"
+                               HorizontalAlignment="Center" Margin="0,30,0,0" VerticalAlignment="Top"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- ==============================================================
+             DRAG AND DROP OVERLAY
+             ============================================================== -->
+        <Border x:Name="DropOverlay" Grid.RowSpan="3" Grid.ColumnSpan="2" Visibility="Collapsed"
+                Background="{DynamicResource B.Scrim}" IsHitTestVisible="False" Opacity="0">
+            <Border Width="420" Height="220" CornerRadius="20" Background="{DynamicResource B.Elevated}"
+                    BorderBrush="{DynamicResource B.Accent}" BorderThickness="2"
+                    VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Path Data="{StaticResource I.Download}" Stretch="Uniform" Width="40" Height="40"
+                          Stroke="{DynamicResource B.Accent}" StrokeThickness="1.6" Fill="Transparent"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="TxtDropTitle" Text="Drop to add" Style="{StaticResource Txt.Heading}"
+                               HorizontalAlignment="Center" Margin="0,20,0,0"/>
+                    <TextBlock x:Name="TxtDropSub" Text="" Style="{StaticResource Txt.Muted}"
+                               HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- ==============================================================
+             MODALS
+             ============================================================== -->
+
+        <!-- create playlist -->
+        <Border x:Name="ModalCreate" Grid.RowSpan="3" Grid.ColumnSpan="2" Visibility="Collapsed"
+                Background="{DynamicResource B.Scrim}" MouseLeftButtonDown="ModalScrim_Click">
+            <Border Width="480" Background="{DynamicResource B.Elevated}" CornerRadius="20" Padding="34"
+                    BorderBrush="{DynamicResource B.Stroke}" BorderThickness="1"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    RenderTransformOrigin="0.5,0.5" MouseLeftButtonDown="ModalCard_Click">
+                <StackPanel>
+                    <TextBlock Text="New playlist" Style="{StaticResource Txt.Title}" FontSize="22"/>
+                    <TextBlock Text="Give it a name. You can change the cover later."
+                               Style="{StaticResource Txt.Muted}" FontSize="12.5" Margin="0,8,0,24"/>
+                    <TextBox x:Name="TxtPlaylistName" Style="{StaticResource Tb.Field}" FontSize="15"
+                             local:Ui.Watermark="Playlist name" KeyDown="TxtPlaylistName_KeyDown"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,26,0,0">
+                        <Button Content="Cancel" Style="{StaticResource Btn.Ghost}" Margin="0,0,10,0"
+                                Click="BtnCloseModals_Click"/>
+                        <Button Content="Create" Style="{StaticResource Btn.Primary}"
+                                Click="BtnConfirmCreatePlaylist_Click"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
         </Border>
 
-        <!-- Info Popups (Features) -->
-        <Border x:Name="FeaturePopup" Grid.RowSpan="3" Grid.ColumnSpan="2" Background="#B2000000" Visibility="Collapsed" MouseLeftButtonDown="PopupOverlay_MouseDown">
-            <Border Width="400" Background="{StaticResource SecondaryBrush}" Padding="30" VerticalAlignment="Center" CornerRadius="12">
+        <!-- rename -->
+        <Border x:Name="ModalRename" Grid.RowSpan="3" Grid.ColumnSpan="2" Visibility="Collapsed"
+                Background="{DynamicResource B.Scrim}" MouseLeftButtonDown="ModalScrim_Click">
+            <Border Width="480" Background="{DynamicResource B.Elevated}" CornerRadius="20" Padding="34"
+                    BorderBrush="{DynamicResource B.Stroke}" BorderThickness="1"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    MouseLeftButtonDown="ModalCard_Click">
                 <StackPanel>
-                    <TextBlock x:Name="PopupTitle" Text="Feature" FontSize="24" FontWeight="Bold" Margin="0,0,0,15"/>
-                    <TextBlock x:Name="PopupText" Text="Details coming soon." Foreground="{StaticResource GrayBrush}" TextWrapping="Wrap" FontSize="14"/>
-                    <Button Content="Got it" Margin="0,25,0,0" HorizontalAlignment="Right" Click="BtnClosePopup_Click"/>
+                    <TextBlock x:Name="TxtRenameHeading" Text="Rename playlist" Style="{StaticResource Txt.Title}" FontSize="22"/>
+                    <TextBlock x:Name="TxtRenameSub" Text="Choose a new name."
+                               Style="{StaticResource Txt.Muted}" FontSize="12.5" Margin="0,8,0,24"/>
+                    <TextBox x:Name="TxtRenameValue" Style="{StaticResource Tb.Field}" FontSize="15"
+                             local:Ui.Watermark="Name" KeyDown="TxtRenameValue_KeyDown"/>
+                    <TextBox x:Name="TxtRenameValue2" Style="{StaticResource Tb.Field}" FontSize="15" Margin="0,12,0,0"
+                             local:Ui.Watermark="Artist" Visibility="Collapsed" KeyDown="TxtRenameValue_KeyDown"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,26,0,0">
+                        <Button Content="Cancel" Style="{StaticResource Btn.Ghost}" Margin="0,0,10,0"
+                                Click="BtnCloseModals_Click"/>
+                        <Button Content="Save" Style="{StaticResource Btn.Primary}" Click="BtnConfirmRename_Click"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </Border>
+
+        <!-- import from link -->
+        <Border x:Name="ModalImport" Grid.RowSpan="3" Grid.ColumnSpan="2" Visibility="Collapsed"
+                Background="{DynamicResource B.Scrim}" MouseLeftButtonDown="ModalScrim_Click">
+            <Border Width="560" Background="{DynamicResource B.Elevated}" CornerRadius="20" Padding="34"
+                    BorderBrush="{DynamicResource B.Stroke}" BorderThickness="1"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    MouseLeftButtonDown="ModalCard_Click">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <Border Width="30" Height="30" CornerRadius="9" Background="{DynamicResource B.AccentGradient}">
+                            <Path Data="{StaticResource I.Link}" Stretch="Uniform" Width="16" Height="16"
+                                  Stroke="{DynamicResource B.OnAccent}" StrokeThickness="1.7" Fill="Transparent"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Add from a link" Style="{StaticResource Txt.Title}" FontSize="22"
+                                   Margin="12,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBlock Style="{StaticResource Txt.Muted}" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,22"
+                               Text="Paste a YouTube, Spotify, or SoundCloud link and AudioWin pulls in the real title, artist and cover art. Whole playlists and albums come in too."/>
+
+                    <TextBox x:Name="TxtImportUrl" Style="{StaticResource Tb.Field}" FontSize="14"
+                             local:Ui.Watermark="https://…" KeyDown="TxtImportUrl_KeyDown"/>
+
+                    <TextBlock Text="ADD TO" Style="{StaticResource Txt.Label}" Margin="2,20,0,7"/>
+                    <ComboBox x:Name="ComboImportTarget" HorizontalAlignment="Stretch"/>
+
+                    <Grid Margin="0,20,0,0" MinHeight="22">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="ImportSpinner" Width="15" Height="15" Visibility="Collapsed"
+                                     Stroke="{DynamicResource B.Accent}" StrokeThickness="2"
+                                     StrokeDashArray="3 2" RenderTransformOrigin="0.5,0.5" Margin="0,0,10,0">
+                                <Ellipse.RenderTransform>
+                                    <RotateTransform x:Name="ImportSpinnerRotate" Angle="0"/>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
+                            <TextBlock x:Name="TxtImportStatus" Text="" Style="{StaticResource Txt.Muted}"
+                                       FontSize="12.5" TextWrapping="Wrap" MaxWidth="330"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="Close" Style="{StaticResource Btn.Ghost}" Margin="0,0,10,0"
+                                    Click="BtnCloseModals_Click"/>
+                            <Button x:Name="BtnDoImport" Content="Add" Style="{StaticResource Btn.Primary}"
+                                    Click="BtnDoImport_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- ==============================================================
+             TOASTS
+             ============================================================== -->
+        <StackPanel x:Name="ToastHost" Grid.RowSpan="3" Grid.ColumnSpan="2"
+                    HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                    Margin="0,0,0,128" IsHitTestVisible="False"/>
 
     </Grid>
 </Window>

@@ -1,4 +1,6 @@
+using System;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace AudioWin
 {
@@ -7,13 +9,42 @@ namespace AudioWin
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-            this.DispatcherUnhandledException += App_DispatcherUnhandledException;
+
+            DispatcherUnhandledException += OnDispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += (s, args) =>
+            {
+                if (args.ExceptionObject is Exception ex)
+                    StorageManager.Log("FATAL: " + ex);
+            };
+
+            // Paint the palette before the first window is measured, otherwise the
+            // shell flashes in the default dark colours and then re-skins.
+            try
+            {
+                var settings = StorageManager.LoadSettings();
+                ThemeManager.Apply(settings.Theme, settings.Accent);
+            }
+            catch
+            {
+                ThemeManager.Apply("Dark", "Violet");
+            }
         }
 
-        private void App_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
-            MessageBox.Show("An unhandled exception occurred: " + e.Exception.Message + "\n\nStack Trace: " + e.Exception.StackTrace, "AudioWin Crash", MessageBoxButton.OK, MessageBoxImage.Error);
+            StorageManager.Log("Unhandled: " + e.Exception);
+
+            var result = MessageBox.Show(
+                "AudioWin hit an unexpected problem:\n\n" +
+                e.Exception.Message +
+                "\n\nThe details were written to:\n" + StorageManager.LogPath +
+                "\n\nKeep the app running?",
+                "AudioWin",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
             e.Handled = true;
+            if (result == MessageBoxResult.No) Shutdown();
         }
     }
 }

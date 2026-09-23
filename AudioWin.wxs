@@ -1,0 +1,56 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="AudioWin" Manufacturer="AudioWin" Version="2.0.0" UpgradeCode="c52a5a54-7eb3-4752-a5e2-2dc9de94751f">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="AudioWin" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="AudioWin" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder" />
+
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component Id="MainExecutable" Guid="f31bf718-f076-4d2c-80a1-778619bcad09">
+        <File Id="AudioWinExe" Source=".\bin\Release\net10.0-windows10.0.19041.0\win-x64\publish\AudioWin.exe" KeyPath="yes">
+          <!-- Start Menu Shortcut -->
+          <Shortcut Id="ApplicationStartMenuShortcut"
+                    Name="AudioWin"
+                    Description="Fast, offline-first music player"
+                    Directory="ApplicationProgramsFolder"
+                    WorkingDirectory="INSTALLFOLDER"
+                    Icon="AppIcon"
+                    Advertise="yes" />
+
+          <!-- Desktop Shortcut -->
+          <Shortcut Id="ApplicationDesktopShortcut"
+                    Name="AudioWin"
+                    Description="Fast, offline-first music player"
+                    Directory="DesktopFolder"
+                    WorkingDirectory="INSTALLFOLDER"
+                    Icon="AppIcon"
+                    Advertise="yes" />
+        </File>
+      </Component>
+    </ComponentGroup>
+
+    <!-- Cleanup Start Menu Folder on uninstall -->
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcutCleanup" Guid="77a06692-a1f0-4fa2-93cb-64bc9a13b632">
+        <RemoveFolder Id="CleanUpShortCut" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\AudioWin" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <Icon Id="AppIcon" SourceFile=".\app.ico" />
+
+    <Feature Id="MainFeature" Title="AudioWin" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+      <ComponentRef Id="ApplicationShortcutCleanup" />
+    </Feature>
+  </Package>
+</Wix>

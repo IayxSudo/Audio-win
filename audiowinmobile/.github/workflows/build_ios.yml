@@ -1,0 +1,52 @@
+name: Build AudioWin Mobile IPA
+
+on:
+  push:
+    branches: [ "**" ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+
+      - name: Build iOS Application (.app)
+        run: |
+          xcodebuild build \
+            -project AudioWin.xcodeproj \
+            -scheme AudioWin \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            DEVELOPMENT_TEAM="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+      - name: Package .IPA file
+        run: |
+          mkdir -p Payload
+          APP_PATH=$(find build -name "AudioWin.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            APP_PATH=$(find build -name "*.app" -type d | head -n 1)
+          fi
+          echo "Found Application at: $APP_PATH"
+          cp -r "$APP_PATH" Payload/
+          zip -r AudioWinMobile.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AudioWinMobile-IPA
+          path: AudioWinMobile.ipa
+          retention-days: 14
