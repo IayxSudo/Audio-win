@@ -7,9 +7,9 @@ A fast, offline-first music player for Windows, built with WPF, C# and NAudio.
 
 ---
 
-## What's new in 2.0
+## What's new
 
-### A completely rebuilt interface
+A completely rebuilt interface
 - New dark theme built on a proper design system: one palette, one motion
   language, consistent spacing and type throughout.
 - Six accent colours to pick from (Violet, Ocean, Ember, Mint, Rose, Gold). The
@@ -20,7 +20,7 @@ A fast, offline-first music player for Windows, built with WPF, C# and NAudio.
 - Toast notifications instead of blocking dialog boxes.
 - Light theme kept and fixed — it was previously unusable in places.
 
-### Add tracks from a YouTube or Spotify link
+#Add tracks from a YouTube or Spotify link
 Press the link button in the sidebar (or `Ctrl+L`), paste a URL, done. AudioWin
 pulls in the real title, artist and cover art.
 
@@ -37,7 +37,7 @@ own free keys in **Settings → Link import** switches it to the official YouTub
 Data API and Spotify Web API, which is what unlocks whole playlists and albums.
 Keys stay on your PC.
 
-**How playback works for imported tracks.** AudioWin does not download or
+How playback works for imported tracks.** AudioWin does not download or
 decrypt audio from YouTube or Spotify — Spotify's catalogue is DRM-protected and
 there is no legitimate way to do it, and ripping YouTube breaks its terms. So an
 imported entry is a *reference*: correct title, artist and artwork, marked
@@ -52,7 +52,7 @@ Two ways to make one playable:
 Anything still unmatched opens in your browser or the Spotify app instead, and
 is skipped automatically during auto-advance.
 
-### Rebuilt Discord Rich Presence
+Rebuilt Discord Rich Presence
 - Shows as a proper *Listening* activity with cover art, artist and a live
   progress scrubber that matches the real position.
 - Pausing now actually reads as paused instead of letting the timer run on.
@@ -62,7 +62,7 @@ is skipped automatically during auto-advance.
 - Reconnects on its own if Discord starts after AudioWin, and can be switched
   off in Settings.
 
-### Other additions
+Other additions
 - Reads ID3 tags, so tracks show real artist/album names and embedded cover art
   instead of "Unknown Artist" everywhere.
 - Supports mp3, wav, flac, m4a, aac, wma, aiff, ogg and opus.
@@ -76,7 +76,7 @@ is skipped automatically during auto-advance.
 
 ---
 
-## Bugs fixed from 1.x
+Bugs fixed from 1.x
 
 **Audio**
 - Volume reset to 100% on every track change — it was set on the output device,
